@@ -596,7 +596,10 @@ function drawComposite(ctx, cw, ch) {
 
   // 2. Video into screen area
   if (sr) {
+    // 안티앨리어싱 경계 픽셀 보정: 2px 확장해서 프레임 아래로 완전히 덮음
+    const PAD = 2;
     const {sx, sy, sw, sh} = sr;
+    const cx = sx - PAD, cy = sy - PAD, cw2 = sw + PAD*2, ch2 = sh + PAD*2;
     const vs = T.vidScale;
     const dw = sw * vs, dh = sh * vs;
     const ox = T.vidOx/100 * sw;
@@ -605,12 +608,12 @@ function drawComposite(ctx, cw, ch) {
     const dy = sy + (sh-dh)/2 + oy;
 
     ctx.save();
-    ctx.rect(sx, sy, sw, sh);
+    ctx.rect(cx, cy, cw2, ch2);
     ctx.clip();
     if (vidLoaded && videoEl.readyState >= 2) {
       drawVideoCover(ctx, videoEl, dx, dy, dw, dh);
     } else {
-      ctx.fillStyle = '#111'; ctx.fillRect(sx, sy, sw, sh);
+      ctx.fillStyle = '#111'; ctx.fillRect(cx, cy, cw2, ch2);
     }
     ctx.restore();
   }
@@ -772,19 +775,24 @@ function toCanvas(e) {
 // Screen detection
 // ═══════════════════════════════════════════════════
 function detectScreen(img) {
-  const w = img.naturalWidth, h = img.naturalHeight;
-  const tmp = Object.assign(document.createElement('canvas'),{width:w,height:h});
+  const origW = img.naturalWidth, origH = img.naturalHeight;
+
+  // 속도를 위해 최대 600px로 다운샘플 후 스캔, 결과는 원본 좌표로 역산
+  const MAX = 600;
+  const scale = Math.min(1, MAX / Math.max(origW, origH));
+  const w = Math.round(origW * scale), h = Math.round(origH * scale);
+
+  const tmp = Object.assign(document.createElement('canvas'), { width: w, height: h });
   const tc = tmp.getContext('2d');
-  tc.drawImage(img, 0, 0);
+  tc.drawImage(img, 0, 0, w, h);
   const px = tc.getImageData(0, 0, w, h).data;
   const alpha = (x, y) => px[(y * w + x) * 4 + 3];
 
-  // 중앙이 불투명하면 실패
-  const cx = Math.floor(w/2), cy = Math.floor(h/2);
+  const cx = Math.floor(w / 2), cy = Math.floor(h / 2);
+
+  // 중앙이 불투명하면 스크린 없음
   if (alpha(cx, cy) > 30) return null;
 
-  // 각 행/열에서 투명 영역의 정확한 경계를 픽셀 단위로 스캔
-  // → 행별로 투명 구간의 min/max x를 구하고, 그 중 중앙 열을 포함하는 행만 취함
   let minX = w, maxX = 0, minY = h, maxY = 0;
   const THRESH = 30;
 
@@ -794,7 +802,6 @@ function detectScreen(img) {
       if (alpha(x, y) < THRESH) { if (rowMin < 0) rowMin = x; rowMax = x; }
     }
     if (rowMin < 0) continue;
-    // 중앙 열(cx)을 포함하는 행만 스크린 영역으로 간주
     if (rowMin <= cx && cx <= rowMax) {
       if (y < minY) minY = y;
       if (y > maxY) maxY = y;
@@ -804,7 +811,14 @@ function detectScreen(img) {
   }
 
   if (minX >= maxX || minY >= maxY) return null;
-  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+
+  // 원본 해상도 좌표로 역산
+  return {
+    x: Math.round(minX / scale),
+    y: Math.round(minY / scale),
+    w: Math.round((maxX - minX) / scale),
+    h: Math.round((maxY - minY) / scale),
+  };
 }
 
 // ═══════════════════════════════════════════════════
