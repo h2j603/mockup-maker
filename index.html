@@ -215,6 +215,34 @@ input[type=number]{width:60px;padding:4px 6px;background:var(--panel2);
   </div>
 </div>
 
+<!-- ③-b 프레임 반사광 -->
+<div class="sec" id="sec-blend">
+  <div class="sec-hd open" onclick="toggleSec(this)">반사광 보정 <span class="arr">▾</span></div>
+  <div class="sec-body">
+    <div class="field">
+      <label>블렌드 모드</label>
+      <div class="pills" style="flex-wrap:wrap">
+        <button class="pill active" data-blend="source-over" onclick="setBlend('source-over',this)">기본</button>
+        <button class="pill" data-blend="screen"      onclick="setBlend('screen',this)">Screen</button>
+        <button class="pill" data-blend="multiply"    onclick="setBlend('multiply',this)">Multiply</button>
+        <button class="pill" data-blend="overlay"     onclick="setBlend('overlay',this)">Overlay</button>
+        <button class="pill" data-blend="soft-light"  onclick="setBlend('soft-light',this)">Soft Light</button>
+      </div>
+      <span style="font-size:9.5px;color:var(--muted);margin-top:2px;display:block">
+        반사광 어색할 땐 <strong style="color:rgba(255,255,255,.55)">Screen</strong> 추천
+      </span>
+    </div>
+    <div class="field">
+      <label>프레임 불투명도</label>
+      <div class="field-row">
+        <input type="range" id="frame-opacity" min="10" max="100" value="100"
+          oninput="T.frameOpacity=+this.value/100;document.getElementById('frame-opacity-val').textContent=this.value+'%'">
+        <span class="val" id="frame-opacity-val">100%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ④ 배경 -->
 <div class="sec" id="sec-bg">
   <div class="sec-hd open" onclick="toggleSec(this)">배경 <span class="arr">▾</span></div>
@@ -371,6 +399,8 @@ const T = {   // transform state
   vidScale: 1.0,
   vidOx: 0,   // % offset
   vidOy: 0,
+  frameBlend: 'source-over',
+  frameOpacity: 1.0,
 };
 
 const BG = {
@@ -528,8 +558,12 @@ function drawComposite(ctx, cw, ch) {
     ctx.restore();
   }
 
-  // 3. Frame PNG on top (as-is, no color change)
+  // 3. Frame PNG on top — blend mode + opacity 적용
+  ctx.save();
+  ctx.globalCompositeOperation = T.frameBlend;
+  ctx.globalAlpha = T.frameOpacity;
   ctx.drawImage(frameImg, fr.fx, fr.fy, fr.fw, fr.fh);
+  ctx.restore();
 }
 
 function drawVideoCover(ctx, vid, x, y, w, h) {
@@ -779,6 +813,12 @@ function updateBg() {
   const sc = document.getElementById('solid-c').value;
   BG.solidColor = sc;
   document.getElementById('solid-hex').textContent = sc;
+}
+
+function setBlend(mode, btn) {
+  T.frameBlend = mode;
+  btn.closest('.pills').querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
 }
 
 function setBgFit(fit, btn) {
