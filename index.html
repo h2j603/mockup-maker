@@ -149,16 +149,50 @@ input[type=number]{width:60px;padding:4px 6px;background:var(--panel2);
 
 <!-- ① 프레임 -->
 <div class="sec" id="sec-frame">
-  <div class="sec-hd open" onclick="toggleSec(this)">프레임 PNG <span class="arr">▾</span></div>
+  <div class="sec-hd open" onclick="toggleSec(this)">프레임 <span class="arr">▾</span></div>
   <div class="sec-body">
-    <div class="dz" id="frame-dz">
-      <div class="dz-ic">🖼</div>
-      <div class="dz-lb">투명 스크린 PNG 업로드<br><span style="font-size:9.5px;opacity:.6">Figma / Mockuphone / ls.graphics</span></div>
-      <div class="dz-nm" id="frame-nm"></div>
+    <!-- 모드 전환 -->
+    <div class="pills" id="frame-mode-pills">
+      <button class="pill active" onclick="setFrameMode('frame',this)">프레임 사용</button>
+      <button class="pill"        onclick="setFrameMode('noframe',this)">프레임 없음</button>
     </div>
-    <input type="file" id="frame-fi" accept="image/png" style="display:none">
-    <div class="screen-ok"  id="screen-ok"></div>
-    <div class="screen-err" id="screen-err"></div>
+
+    <!-- 프레임 있음 -->
+    <div id="fm-frame">
+      <!-- 프리셋 썸네일 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px" id="preset-grid"></div>
+      <!-- 직접 업로드 -->
+      <div class="dz" id="frame-dz" style="padding:10px">
+        <div class="dz-ic" style="font-size:15px">＋</div>
+        <div class="dz-lb" style="font-size:10.5px">직접 업로드 (PNG)</div>
+        <div class="dz-nm" id="frame-nm"></div>
+      </div>
+      <input type="file" id="frame-fi" accept="image/png" style="display:none">
+      <div class="screen-ok"  id="screen-ok"></div>
+      <div class="screen-err" id="screen-err"></div>
+    </div>
+
+    <!-- 프레임 없음 -->
+    <div id="fm-noframe" style="display:none">
+      <div class="field">
+        <label>모서리 반경</label>
+        <div class="field-row">
+          <input type="range" id="no-radius" min="0" max="200" value="0"
+            oninput="T.noFrameRadius=+this.value;document.getElementById('no-radius-val').textContent=this.value+'px'">
+          <span class="val" id="no-radius-val">0px</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>화면 종횡비</label>
+        <div class="pills" id="ratio-pills">
+          <button class="pill active" data-ratio="video" onclick="setNoFrameRatio('video',this)">영상 비율</button>
+          <button class="pill" data-ratio="9:16"  onclick="setNoFrameRatio('9:16',this)">9:16</button>
+          <button class="pill" data-ratio="16:9"  onclick="setNoFrameRatio('16:9',this)">16:9</button>
+          <button class="pill" data-ratio="1:1"   onclick="setNoFrameRatio('1:1',this)">1:1</button>
+          <button class="pill" data-ratio="4:5"   onclick="setNoFrameRatio('4:5',this)">4:5</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -401,6 +435,9 @@ const T = {   // transform state
   vidOy: 0,
   frameBlend: 'source-over',
   frameOpacity: 1.0,
+  noFrame: false,
+  noFrameRadius: 0,
+  noFrameRatio: 'video', // 'video' | '9:16' | '16:9' | '1:1' | '4:5'
 };
 
 const BG = {
@@ -532,6 +569,26 @@ function drawComposite(ctx, cw, ch) {
   // 1. Background
   drawBg(ctx, cw, ch);
 
+  // ── 프레임 없음 모드 ──────────────────────────
+  if (T.noFrame) {
+    if (!vidLoaded) return;
+    const {fx, fy, fw, fh} = getNoFrameRect(cw, ch);
+    const r = T.noFrameRadius;
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(fx, fy, fw, fh, r) : ctx.rect(fx, fy, fw, fh);
+    ctx.clip();
+    const vs = T.vidScale;
+    const dw = fw*vs, dh = fh*vs;
+    const ox = T.vidOx/100*fw, oy = T.vidOy/100*fh;
+    const dx = fx+(fw-dw)/2+ox, dy = fy+(fh-dh)/2+oy;
+    if (videoEl.readyState >= 2) drawVideoCover(ctx, videoEl, dx, dy, dw, dh);
+    else { ctx.fillStyle='#111'; ctx.fillRect(fx,fy,fw,fh); }
+    ctx.restore();
+    return;
+  }
+
+  // ── 프레임 있음 모드 ──────────────────────────
   if (!frameImg) return;
 
   const fr = getFrameRect(cw, ch);
@@ -564,6 +621,26 @@ function drawComposite(ctx, cw, ch) {
   ctx.globalAlpha = T.frameOpacity;
   ctx.drawImage(frameImg, fr.fx, fr.fy, fr.fw, fr.fh);
   ctx.restore();
+}
+
+// 프레임 없음 모드용 rect 계산
+function getNoFrameRect(cw, ch) {
+  const vid = videoEl;
+  let ar;
+  if (T.noFrameRatio === 'video' && vid.videoWidth && vid.videoHeight) {
+    ar = vid.videoWidth / vid.videoHeight;
+  } else {
+    const map = {'9:16':9/16,'16:9':16/9,'1:1':1,'4:5':4/5};
+    ar = map[T.noFrameRatio] || 9/16;
+  }
+  const maxW = cw * T.frame.scale;
+  const maxH = ch * T.frame.scale;
+  let fw, fh;
+  if (maxW / maxH > ar) { fh = maxH; fw = fh * ar; }
+  else { fw = maxW; fh = fw / ar; }
+  const fx = T.frame.cx * cw - fw/2;
+  const fy = T.frame.cy * ch - fh/2;
+  return {fx, fy, fw, fh};
 }
 
 function drawVideoCover(ctx, vid, x, y, w, h) {
@@ -697,25 +774,37 @@ function toCanvas(e) {
 function detectScreen(img) {
   const w = img.naturalWidth, h = img.naturalHeight;
   const tmp = Object.assign(document.createElement('canvas'),{width:w,height:h});
-  tmp.getContext('2d').drawImage(img,0,0);
-  const px = tmp.getContext('2d').getImageData(0,0,w,h).data;
-  const a = (x,y) => { if(x<0||y<0||x>=w||y>=h)return 255; return px[(y*w+x)*4+3]; };
-  const cx=Math.floor(w/2), cy=Math.floor(h/2);
-  if (a(cx,cy) > 30) return null;
+  const tc = tmp.getContext('2d');
+  tc.drawImage(img, 0, 0);
+  const px = tc.getImageData(0, 0, w, h).data;
+  const alpha = (x, y) => px[(y * w + x) * 4 + 3];
 
-  const step = Math.max(1, Math.floor(Math.min(w,h)/300));
-  let minX=cx, maxX=cx, minY=cy, maxY=cy;
-  const Q=[[cx,cy]], visited=new Set([`${cx},${cy}`]);
-  while(Q.length) {
-    const [x,y]=Q.shift();
-    if(x<minX)minX=x; if(x>maxX)maxX=x;
-    if(y<minY)minY=y; if(y>maxY)maxY=y;
-    for(const[dx,dy] of [[-step,0],[step,0],[0,-step],[0,step]]) {
-      const nx=x+dx, ny=y+dy, k=`${nx},${ny}`;
-      if(!visited.has(k)&&a(nx,ny)<30){visited.add(k);Q.push([nx,ny]);}
+  // 중앙이 불투명하면 실패
+  const cx = Math.floor(w/2), cy = Math.floor(h/2);
+  if (alpha(cx, cy) > 30) return null;
+
+  // 각 행/열에서 투명 영역의 정확한 경계를 픽셀 단위로 스캔
+  // → 행별로 투명 구간의 min/max x를 구하고, 그 중 중앙 열을 포함하는 행만 취함
+  let minX = w, maxX = 0, minY = h, maxY = 0;
+  const THRESH = 30;
+
+  for (let y = 0; y < h; y++) {
+    let rowMin = -1, rowMax = -1;
+    for (let x = 0; x < w; x++) {
+      if (alpha(x, y) < THRESH) { if (rowMin < 0) rowMin = x; rowMax = x; }
+    }
+    if (rowMin < 0) continue;
+    // 중앙 열(cx)을 포함하는 행만 스크린 영역으로 간주
+    if (rowMin <= cx && cx <= rowMax) {
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      if (rowMin < minX) minX = rowMin;
+      if (rowMax > maxX) maxX = rowMax;
     }
   }
-  return {x:minX, y:minY, w:maxX-minX, h:maxY-minY};
+
+  if (minX >= maxX || minY >= maxY) return null;
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
 }
 
 // ═══════════════════════════════════════════════════
@@ -772,13 +861,82 @@ function showCanvas() {
 }
 
 function checkReady() {
-  const ready = frameImg && screenArea && vidLoaded;
+  const ready = T.noFrame ? vidLoaded : (frameImg && screenArea && vidLoaded);
   document.getElementById('export-btn').disabled = !ready;
   document.getElementById('export-hint').textContent = ready
     ? `${PLATFORMS[platform].w}×${PLATFORMS[platform].h} · ${fps}fps · ${Q[quality]/1e6|0}Mbps`
-    : !frameImg ? '① 프레임 PNG를 올려주세요'
-    : !screenArea ? '스크린 투명 영역이 감지되지 않았어요'
-    : '② 영상을 올려주세요';
+    : !vidLoaded ? '영상을 올려주세요'
+    : !frameImg  ? '프레임을 선택하거나 "프레임 없음"으로 변경하세요'
+    : '스크린 투명 영역이 감지되지 않았어요';
+}
+
+// ── 프리셋 프레임 ─────────────────────────────────
+const PRESET_FRAMES = [
+  'image-from-rawpixel-id-2023077-original.png',
+  'image-from-rawpixel-id-2780331-original.png',
+  'image-from-rawpixel-id-2813176-original.png',
+  'image-from-rawpixel-id-2839156-original.png',
+];
+
+function buildPresetGrid() {
+  const grid = document.getElementById('preset-grid');
+  PRESET_FRAMES.forEach((name, i) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;cursor:pointer;border-radius:6px;overflow:hidden;' +
+      'border:2px solid transparent;transition:border-color .15s;background:#1a1a1a;aspect-ratio:1';
+    wrap.dataset.idx = i;
+
+    const img = document.createElement('img');
+    img.src = `./frames/${name}`;
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;padding:4px';
+    img.loading = 'lazy';
+
+    wrap.appendChild(img);
+    wrap.addEventListener('click', () => loadPreset(name, wrap));
+    grid.appendChild(wrap);
+  });
+}
+
+function loadPreset(name, wrapEl) {
+  const url = `./frames/${name}`;
+  const img = new Image();
+  img.onload = () => {
+    frameImg = img;
+    const scr = detectScreen(img);
+    if (scr && scr.w > 10 && scr.h > 10) {
+      screenArea = scr;
+      const ok = document.getElementById('screen-ok');
+      ok.textContent = `✓ 스크린 감지 (${scr.w}×${scr.h}px)`;
+      ok.style.display = 'block';
+      document.getElementById('screen-err').style.display = 'none';
+    } else {
+      screenArea = null;
+      document.getElementById('screen-err').textContent = '⚠ 투명 스크린 없음';
+      document.getElementById('screen-err').style.display = 'block';
+      document.getElementById('screen-ok').style.display = 'none';
+    }
+    // 선택 표시
+    document.querySelectorAll('#preset-grid > div').forEach(d => d.style.borderColor='transparent');
+    if (wrapEl) wrapEl.style.borderColor = 'var(--accent)';
+    showCanvas(); checkReady();
+  };
+  img.src = url;
+}
+
+// ── 프레임 모드 전환 ──────────────────────────────
+function setFrameMode(mode, btn) {
+  T.noFrame = (mode === 'noframe');
+  document.querySelectorAll('#frame-mode-pills .pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('fm-frame').style.display   = T.noFrame ? 'none' : '';
+  document.getElementById('fm-noframe').style.display = T.noFrame ? ''     : 'none';
+  showCanvas(); checkReady();
+}
+
+function setNoFrameRatio(ratio, btn) {
+  T.noFrameRatio = ratio;
+  document.querySelectorAll('#ratio-pills .pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
 }
 
 function resetTransform() {
@@ -1094,6 +1252,7 @@ document.getElementById('gc2').addEventListener('input', updateBg);
 document.getElementById('solid-c').addEventListener('input', updateBg);
 
 // Start
+buildPresetGrid();
 setupCanvas(platform);
 render();
 checkReady();
