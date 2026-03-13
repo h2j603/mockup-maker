@@ -777,7 +777,7 @@ function toCanvas(e) {
 function detectScreen(img) {
   const origW = img.naturalWidth, origH = img.naturalHeight;
 
-  // 속도를 위해 최대 600px로 다운샘플 후 스캔, 결과는 원본 좌표로 역산
+  // 최대 600px 다운샘플 — 속도 확보
   const MAX = 600;
   const scale = Math.min(1, MAX / Math.max(origW, origH));
   const w = Math.round(origW * scale), h = Math.round(origH * scale);
@@ -786,33 +786,52 @@ function detectScreen(img) {
   const tc = tmp.getContext('2d');
   tc.drawImage(img, 0, 0, w, h);
   const px = tc.getImageData(0, 0, w, h).data;
-  const alpha = (x, y) => px[(y * w + x) * 4 + 3];
 
-  const cx = Math.floor(w / 2), cy = Math.floor(h / 2);
-
-  // 중앙이 불투명하면 스크린 없음
-  if (alpha(cx, cy) > 30) return null;
-
-  let minX = w, maxX = 0, minY = h, maxY = 0;
   const THRESH = 30;
+  const isTrans = i => px[i * 4 + 3] < THRESH;
+  const idx = (x, y) => y * w + x;
 
-  for (let y = 0; y < h; y++) {
-    let rowMin = -1, rowMax = -1;
-    for (let x = 0; x < w; x++) {
-      if (alpha(x, y) < THRESH) { if (rowMin < 0) rowMin = x; rowMax = x; }
-    }
-    if (rowMin < 0) continue;
-    if (rowMin <= cx && cx <= rowMax) {
+  // ① 외곽에서 BFS → 배경 투명 픽셀에 visited 마킹
+  const visited = new Uint8Array(w * h);
+  const queue = [];
+
+  const enqueue = (x, y) => {
+    const i = idx(x, y);
+    if (visited[i] || !isTrans(i)) return;
+    visited[i] = 1;
+    queue.push(i);
+  };
+
+  for (let x = 0; x < w; x++) { enqueue(x, 0); enqueue(x, h - 1); }
+  for (let y = 1; y < h - 1; y++) { enqueue(0, y); enqueue(w - 1, y); }
+
+  let qi = 0;
+  while (qi < queue.length) {
+    const i = queue[qi++];
+    const x = i % w, y = (i / w) | 0;
+    if (x > 0)     enqueue(x - 1, y);
+    if (x < w - 1) enqueue(x + 1, y);
+    if (y > 0)     enqueue(x, y - 1);
+    if (y < h - 1) enqueue(x, y + 1);
+  }
+
+  // ② 방문 안 된 투명 픽셀 = 디바이스 내부 스크린 구멍
+  let minX = w, maxX = 0, minY = h, maxY = 0, found = false;
+
+  for (let i = 0; i < w * h; i++) {
+    if (!visited[i] && isTrans(i)) {
+      const x = i % w, y = (i / w) | 0;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
       if (y < minY) minY = y;
       if (y > maxY) maxY = y;
-      if (rowMin < minX) minX = rowMin;
-      if (rowMax > maxX) maxX = rowMax;
+      found = true;
     }
   }
 
-  if (minX >= maxX || minY >= maxY) return null;
+  if (!found || maxX - minX < 5 || maxY - minY < 5) return null;
 
-  // 원본 해상도 좌표로 역산
+  // 원본 해상도로 역산
   return {
     x: Math.round(minX / scale),
     y: Math.round(minY / scale),
