@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #0f0f0f;
+  --panel:  #161616;
+  --panel2: #1e1e1e;
+  --border: rgba(255,255,255,0.07);
+  --bh:     rgba(255,255,255,0.14);
+  --text:   rgba(255,255,255,0.85);
+  --muted:  rgba(255,255,255,0.3);
+  --accent: #6366f1;
+  --acc-h:  #818cf8;
+  --font:   'Pretendard', -apple-system, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);
+  height:100dvh;display:flex;flex-direction:column;overflow:hidden;font-size:13px}
+
+/* ── Header ── */
+header{height:48px;padding:0 18px;display:flex;align-items:center;
+  justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{font-size:13px;font-weight:600;letter-spacing:.05em}
+.logo em{color:var(--accent);font-style:normal}
+.tagline{font-size:11px;color:var(--muted)}
+
+/* ── Layout ── */
+#workspace{display:flex;flex:1;overflow:hidden}
+
+/* ── Sidebar ── */
+aside{width:240px;flex-shrink:0;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden}
+.sidebar-scroll{flex:1;overflow-y:auto;padding:14px 12px;
+  display:flex;flex-direction:column;gap:0}
+.sidebar-scroll::-webkit-scrollbar{width:3px}
+.sidebar-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+
+/* Section */
+.sec{border-bottom:1px solid var(--border)}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 4px;cursor:pointer;user-select:none;
+  font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  transition:color .15s}
+.sec-hd:hover{color:var(--text)}
+.sec-hd .arr{font-size:10px;transition:transform .2s}
+.sec-hd.open .arr{transform:rotate(180deg)}
+.sec-body{padding:0 4px 14px;display:flex;flex-direction:column;gap:10px}
+
+/* Field */
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:10.5px;font-weight:500;color:var(--muted)}
+.field-row{display:flex;align-items:center;gap:8px}
+
+/* Pill buttons */
+.pills{display:flex;gap:4px;flex-wrap:wrap}
+.pill{padding:4px 10px;background:var(--panel2);border:1px solid var(--border);
+  border-radius:20px;font-family:var(--font);font-size:11px;color:var(--muted);
+  cursor:pointer;transition:all .15s}
+.pill:hover{border-color:var(--bh);color:var(--text)}
+.pill.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* Input */
+input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
+input[type=color]{width:36px;height:28px;border:1px solid var(--border);
+  border-radius:5px;background:var(--panel2);padding:2px;cursor:pointer}
+input[type=number]{width:60px;padding:4px 6px;background:var(--panel2);
+  border:1px solid var(--border);border-radius:5px;font-family:var(--font);
+  font-size:12px;color:var(--text);text-align:center}
+.val{font-size:11px;color:var(--muted);min-width:28px;text-align:right}
+
+/* Tab panel */
+.tab-panel{display:none}
+.tab-panel.active{display:flex;flex-direction:column;gap:10px}
+
+/* Drop zone */
+.dz{border:1px dashed rgba(255,255,255,.12);border-radius:8px;
+  padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  cursor:pointer;text-align:center;transition:border-color .2s,background .2s;
+  background:rgba(255,255,255,.015)}
+.dz:hover,.dz.over{border-color:var(--accent);background:rgba(99,102,241,.06)}
+.dz.done{border-style:solid;border-color:rgba(99,102,241,.4)}
+.dz .dz-ic{font-size:18px;opacity:.4}
+.dz .dz-lb{font-size:11px;color:var(--muted);line-height:1.5}
+.dz .dz-nm{font-size:10px;color:var(--accent);font-weight:500;word-break:break-all;display:none}
+
+/* Screen status */
+.screen-ok {font-size:10.5px;color:#4ade80;padding:6px 8px;background:rgba(74,222,128,.07);
+  border-radius:6px;display:none}
+.screen-err{font-size:10.5px;color:#f87171;padding:6px 8px;background:rgba(248,113,113,.07);
+  border-radius:6px;display:none}
+
+/* Platform grid */
+.plat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.plat-btn{padding:7px 4px;background:var(--panel2);border:1px solid var(--border);
+  border-radius:7px;cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:3px;font-family:var(--font);color:var(--muted);transition:all .15s}
+.plat-btn:hover{border-color:var(--bh);color:var(--text)}
+.plat-btn.active{border-color:var(--accent);background:rgba(99,102,241,.1);color:var(--text)}
+.plat-btn .pi{font-size:14px}
+.plat-btn .pl{font-size:9.5px;letter-spacing:.02em}
+.plat-btn .pr{font-size:8.5px;color:var(--muted)}
+
+/* Export button */
+#export-btn{width:100%;padding:10px;background:var(--accent);color:#fff;
+  border:none;border-radius:7px;font-size:13px;font-weight:600;font-family:var(--font);
+  cursor:pointer;letter-spacing:.02em;transition:background .2s}
+#export-btn:hover:not(:disabled){background:var(--acc-h)}
+#export-btn:disabled{opacity:.35;cursor:not-allowed}
+#export-btn.rec{background:#ef4444;animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* Progress */
+#progress-wrap{display:none;flex-direction:column;gap:5px}
+#progress-bar-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+#progress-bar{height:100%;background:var(--accent);width:0%;transition:width .1s}
+#progress-label{font-size:10px;color:var(--muted)}
+.hint{font-size:10px;color:var(--muted);line-height:1.55;text-align:center}
+
+/* ── Preview ── */
+#preview-area{flex:1;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;position:relative;background:var(--bg)}
+#canvas-wrap{position:relative;cursor:default}
+#main-canvas{display:block;cursor:crosshair}
+#ui-canvas{position:absolute;top:0;left:0;pointer-events:none}
+
+.empty-msg{position:absolute;text-align:center;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;gap:8px}
+.empty-msg .ei{font-size:36px;opacity:.1}
+.empty-msg .et{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Mockup <em>Maker</em></div>
+  <div class="tagline">프레임 PNG + 영상 합성 → MP4 내보내기</div>
+</header>
+
+<div id="workspace">
+<aside>
+<div class="sidebar-scroll">
+
+<!-- ① 프레임 -->
+<div class="sec" id="sec-frame">
+  <div class="sec-hd open" onclick="toggleSec(this)">프레임 PNG <span class="arr">▾</span></div>
+  <div class="sec-body">
+    <div class="dz" id="frame-dz">
+      <div class="dz-ic">🖼</div>
+      <div class="dz-lb">투명 스크린 PNG 업로드<br><span style="font-size:9.5px;opacity:.6">Figma / Mockuphone / ls.graphics</span></div>
+      <div class="dz-nm" id="frame-nm"></div>
+    </div>
+    <input type="file" id="frame-fi" accept="image/png" style="display:none">
+    <div class="screen-ok"  id="screen-ok"></div>
+    <div class="screen-err" id="screen-err"></div>
+  </div>
+</div>
+
+<!-- ② 영상 -->
+<div class="sec" id="sec-vid">
+  <div class="sec-hd open" onclick="toggleSec(this)">영상 <span class="arr">▾</span></div>
+  <div class="sec-body">
+    <div class="dz" id="vid-dz">
+      <div class="dz-ic">🎬</div>
+      <div class="dz-lb">클릭하거나 드래그</div>
+      <div class="dz-nm" id="vid-nm"></div>
+    </div>
+    <input type="file" id="vid-fi" accept="video/*" style="display:none">
+  </div>
+</div>
+
+<!-- ③ 크기·위치 -->
+<div class="sec" id="sec-size">
+  <div class="sec-hd open" onclick="toggleSec(this)">크기 · 위치 <span class="arr">▾</span></div>
+  <div class="sec-body">
+    <div class="field">
+      <label>프레임 크기</label>
+      <div class="field-row">
+        <input type="range" id="frame-scale" min="10" max="150" value="80"
+          oninput="T.frame.scale=+this.value/100;document.getElementById('frame-scale-val').textContent=this.value+'%'">
+        <span class="val" id="frame-scale-val">80%</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>영상 크기 (스크린 내)</label>
+      <div class="field-row">
+        <input type="range" id="vid-scale" min="50" max="200" value="100"
+          oninput="T.vidScale=+this.value/100;document.getElementById('vid-scale-val').textContent=this.value+'%'">
+        <span class="val" id="vid-scale-val">100%</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>영상 오프셋 X</label>
+      <div class="field-row">
+        <input type="range" id="vid-ox" min="-100" max="100" value="0"
+          oninput="T.vidOx=+this.value;document.getElementById('vid-ox-val').textContent=this.value">
+        <span class="val" id="vid-ox-val">0</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>영상 오프셋 Y</label>
+      <div class="field-row">
+        <input type="range" id="vid-oy" min="-100" max="100" value="0"
+          oninput="T.vidOy=+this.value;document.getElementById('vid-oy-val').textContent=this.value">
+        <span class="val" id="vid-oy-val">0</span>
+      </div>
+    </div>
+    <button class="pill" style="width:100%;justify-content:center" onclick="resetTransform()">위치 초기화</button>
+  </div>
+</div>
+
+<!-- ④ 배경 -->
+<div class="sec" id="sec-bg">
+  <div class="sec-hd open" onclick="toggleSec(this)">배경 <span class="arr">▾</span></div>
+  <div class="sec-body">
+    <div class="pills" id="bg-pills">
+      <button class="pill active" data-bg="gradient" onclick="switchBg('gradient',this)">그라디언트</button>
+      <button class="pill" data-bg="solid"    onclick="switchBg('solid',this)">단색</button>
+      <button class="pill" data-bg="image"    onclick="switchBg('image',this)">이미지</button>
+      <button class="pill" data-bg="bgvideo"  onclick="switchBg('bgvideo',this)">동영상</button>
+    </div>
+
+    <!-- 그라디언트 -->
+    <div class="tab-panel active" id="bp-gradient">
+      <div class="field-row">
+        <input type="color" id="gc1" value="#0d0d1a" oninput="updateBg()">
+        <input type="color" id="gc2" value="#1a0533" oninput="updateBg()">
+      </div>
+      <div class="field">
+        <label>각도</label>
+        <div class="field-row">
+          <input type="range" id="gangle" min="0" max="360" value="135" oninput="document.getElementById('gangle-v').textContent=this.value+'°';updateBg()">
+          <span class="val" id="gangle-v">135°</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 단색 -->
+    <div class="tab-panel" id="bp-solid">
+      <div class="field">
+        <label>색상</label>
+        <div class="field-row">
+          <input type="color" id="solid-c" value="#0a0a12" oninput="updateBg()">
+          <span class="val" id="solid-hex">#0a0a12</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 이미지 -->
+    <div class="tab-panel" id="bp-image">
+      <div class="dz" id="bgimg-dz">
+        <div class="dz-lb">배경 이미지 업로드</div>
+      </div>
+      <input type="file" id="bgimg-fi" accept="image/*" style="display:none">
+      <div class="field">
+        <label>맞춤</label>
+        <div class="pills" id="bgimg-fit-pills">
+          <button class="pill active" data-fit="cover"   onclick="setBgFit('cover',this)">꽉 채우기</button>
+          <button class="pill" data-fit="contain" onclick="setBgFit('contain',this)">전체 보기</button>
+          <button class="pill" data-fit="stretch" onclick="setBgFit('stretch',this)">늘이기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 배경 동영상 -->
+    <div class="tab-panel" id="bp-bgvideo">
+      <div class="dz" id="bgvid-dz">
+        <div class="dz-lb">배경 동영상 업로드</div>
+      </div>
+      <input type="file" id="bgvid-fi" accept="video/*" style="display:none">
+    </div>
+  </div>
+</div>
+
+<!-- ⑤ 플랫폼 -->
+<div class="sec" id="sec-plat">
+  <div class="sec-hd open" onclick="toggleSec(this)">플랫폼 <span class="arr">▾</span></div>
+  <div class="sec-body">
+    <div class="plat-grid" id="plat-grid">
+      <button class="plat-btn active" data-plat="ig-story">
+        <span class="pi">📱</span><span class="pl">스토리</span><span class="pr">1080×1920</span>
+      </button>
+      <button class="plat-btn" data-plat="ig-feed">
+        <span class="pi">⬜</span><span class="pl">피드 1:1</span><span class="pr">1080×1080</span>
+      </button>
+      <button class="plat-btn" data-plat="ig-port">
+        <span class="pi">📷</span><span class="pl">피드 4:5</span><span class="pr">1080×1350</span>
+      </button>
+      <button class="plat-btn" data-plat="tiktok">
+        <span class="pi">🎵</span><span class="pl">TikTok</span><span class="pr">1080×1920</span>
+      </button>
+      <button class="plat-btn" data-plat="youtube">
+        <span class="pi">▶</span><span class="pl">YouTube</span><span class="pr">1920×1080</span>
+      </button>
+      <button class="plat-btn" data-plat="twitter">
+        <span class="pi">✕</span><span class="pl">X / Twitter</span><span class="pr">1920×1080</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ⑥ 내보내기 -->
+<div class="sec" id="sec-export">
+  <div class="sec-hd open" onclick="toggleSec(this)">내보내기 <span class="arr">▾</span></div>
+  <div class="sec-body">
+    <div class="field">
+      <label>화질</label>
+      <div class="pills" id="q-pills">
+        <button class="pill" data-q="medium" onclick="setQ('medium',this)">8 Mbps</button>
+        <button class="pill active" data-q="high" onclick="setQ('high',this)">25 Mbps</button>
+        <button class="pill" data-q="ultra" onclick="setQ('ultra',this)">60 Mbps</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>FPS</label>
+      <div class="pills" id="fps-pills">
+        <button class="pill" data-fps="24" onclick="setFps(24,this)">24</button>
+        <button class="pill active" data-fps="30" onclick="setFps(30,this)">30</button>
+        <button class="pill" data-fps="60" onclick="setFps(60,this)">60</button>
+      </div>
+    </div>
+    <button id="export-btn" onclick="doExport()" disabled>내보내기</button>
+    <div id="progress-wrap">
+      <div id="progress-bar-track"><div id="progress-bar"></div></div>
+      <div id="progress-label">준비 중...</div>
+    </div>
+    <div class="hint" id="export-hint">프레임과 영상을 업로드하세요</div>
+  </div>
+</div>
+
+</div><!-- sidebar-scroll -->
+</aside>
+
+<main id="preview-area">
+  <div class="empty-msg" id="empty-msg">
+    <div class="ei">📱</div>
+    <div class="et">프레임 PNG와 영상을 업로드하면<br>미리보기가 표시됩니다</div>
+  </div>
+  <div id="canvas-wrap" style="display:none">
+    <canvas id="main-canvas"></canvas>
+    <canvas id="ui-canvas"></canvas>
+  </div>
+</main>
+</div>
+
+<!-- Source video (hidden) -->
+<video id="src-video" style="display:none" loop muted playsinline crossorigin="anonymous"></video>
+
+<script>
+// ═══════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════
+const PLATFORMS = {
+  'ig-story': {w:1080,h:1920},
+  'ig-feed':  {w:1080,h:1080},
+  'ig-port':  {w:1080,h:1350},
+  'tiktok':   {w:1080,h:1920},
+  'youtube':  {w:1920,h:1080},
+  'twitter':  {w:1920,h:1080},
+};
+const Q = { medium:8_000_000, high:25_000_000, ultra:60_000_000 };
+
+const T = {   // transform state
+  frame: { cx: 0.5, cy: 0.5, scale: 0.80 }, // cx/cy = normalized canvas center
+  vidScale: 1.0,
+  vidOx: 0,   // % offset
+  vidOy: 0,
+};
+
+const BG = {
+  type: 'gradient',
+  gc1: '#0d0d1a', gc2: '#1a0533', angle: 135,
+  solidColor: '#0a0a12',
+  img: null, imgFit: 'cover', imgFitColor: '#000',
+  bgVid: null,
+};
+
+let frameImg  = null;
+let screenArea = null;     // {x,y,w,h} in frame image coords
+let videoEl   = document.getElementById('src-video');
+let vidLoaded = false;
+
+let platform = 'ig-story';
+let quality  = 'high';
+let fps      = 30;
+
+let rafId = null;
+
+// Canvas refs
+const mainCanvas = document.getElementById('main-canvas');
+const uiCanvas   = document.getElementById('ui-canvas');
+const mCtx       = mainCanvas.getContext('2d');
+const uCtx       = uiCanvas.getContext('2d');
+
+// Preview display scale (canvas CSS size vs internal)
+let pixelScale = 1; // canvas.width / canvas.clientWidth (for mouse coord mapping)
+
+// ═══════════════════════════════════════════════════
+// Section toggle
+// ═══════════════════════════════════════════════════
+function toggleSec(hd) {
+  hd.classList.toggle('open');
+  const body = hd.nextElementSibling;
+  body.style.display = hd.classList.contains('open') ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════════════
+// Canvas setup
+// ═══════════════════════════════════════════════════
+function setupCanvas(plat) {
+  const {w, h} = PLATFORMS[plat];
+  const area = document.getElementById('preview-area');
+  const aW = area.clientWidth  - 40;
+  const aH = area.clientHeight - 40;
+  const s = Math.min(aW / w, aH / h);
+
+  const cssW = Math.round(w * s);
+  const cssH = Math.round(h * s);
+
+  [mainCanvas, uiCanvas].forEach(c => {
+    c.width  = w;
+    c.height = h;
+    c.style.width  = cssW + 'px';
+    c.style.height = cssH + 'px';
+  });
+
+  uiCanvas.style.pointerEvents = 'auto';
+  pixelScale = w / cssW;
+}
+
+// ═══════════════════════════════════════════════════
+// Background
+// ═══════════════════════════════════════════════════
+function drawBg(ctx, w, h) {
+  if (BG.type === 'gradient') {
+    const a = BG.angle * Math.PI / 180;
+    const cx = w/2, cy = h/2, r = Math.sqrt(cx*cx+cy*cy);
+    const g = ctx.createLinearGradient(cx-Math.cos(a)*r, cy-Math.sin(a)*r,
+                                        cx+Math.cos(a)*r, cy+Math.sin(a)*r);
+    g.addColorStop(0, BG.gc1);
+    g.addColorStop(1, BG.gc2);
+    ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+  } else if (BG.type === 'solid') {
+    ctx.fillStyle = BG.solidColor; ctx.fillRect(0,0,w,h);
+  } else if (BG.type === 'image' && BG.img) {
+    drawMediaFit(ctx, BG.img, w, h, BG.imgFit, BG.imgFitColor);
+  } else if (BG.type === 'bgvideo' && BG.bgVid && BG.bgVid.readyState >= 2) {
+    drawMediaFit(ctx, BG.bgVid, w, h, 'cover', '#000');
+  } else {
+    ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
+  }
+}
+
+function drawMediaFit(ctx, media, cw, ch, fit, bgColor) {
+  const mw = media.naturalWidth || media.videoWidth || 1;
+  const mh = media.naturalHeight || media.videoHeight || 1;
+  const mr = mw/mh, cr = cw/ch;
+  let dx, dy, dw, dh;
+  if (fit === 'cover') {
+    if (mr > cr) { dh=ch; dw=ch*mr; dx=(cw-dw)/2; dy=0; }
+    else         { dw=cw; dh=cw/mr; dx=0; dy=(ch-dh)/2; }
+  } else if (fit === 'contain') {
+    ctx.fillStyle = bgColor||'#000'; ctx.fillRect(0,0,cw,ch);
+    if (mr > cr) { dw=cw; dh=cw/mr; dx=0; dy=(ch-dh)/2; }
+    else         { dh=ch; dw=ch*mr; dx=(cw-dw)/2; dy=0; }
+  } else { // stretch
+    dx=0; dy=0; dw=cw; dh=ch;
+  }
+  ctx.drawImage(media, dx, dy, dw, dh);
+}
+
+// ═══════════════════════════════════════════════════
+// Composite draw
+// ═══════════════════════════════════════════════════
+function getFrameRect(cw, ch) {
+  if (!frameImg) return null;
+  const iw = frameImg.naturalWidth, ih = frameImg.naturalHeight;
+  const s  = (Math.min(cw, ch) * T.frame.scale) / Math.max(iw, ih);
+  const fw = iw * s, fh = ih * s;
+  const fx = T.frame.cx * cw - fw/2;
+  const fy = T.frame.cy * ch - fh/2;
+  return {fx, fy, fw, fh, s};
+}
+
+function getScreenRect(fr) {
+  if (!screenArea || !fr) return null;
+  const {fx, fy, s} = fr;
+  const sx = fx + screenArea.x * s;
+  const sy = fy + screenArea.y * s;
+  const sw = screenArea.w * s;
+  const sh = screenArea.h * s;
+  return {sx, sy, sw, sh};
+}
+
+function drawComposite(ctx, cw, ch) {
+  // 1. Background
+  drawBg(ctx, cw, ch);
+
+  if (!frameImg) return;
+
+  const fr = getFrameRect(cw, ch);
+  const sr = getScreenRect(fr);
+
+  // 2. Video into screen area
+  if (sr) {
+    const {sx, sy, sw, sh} = sr;
+    const vs = T.vidScale;
+    const dw = sw * vs, dh = sh * vs;
+    const ox = T.vidOx/100 * sw;
+    const oy = T.vidOy/100 * sh;
+    const dx = sx + (sw-dw)/2 + ox;
+    const dy = sy + (sh-dh)/2 + oy;
+
+    ctx.save();
+    ctx.rect(sx, sy, sw, sh);
+    ctx.clip();
+    if (vidLoaded && videoEl.readyState >= 2) {
+      drawVideoCover(ctx, videoEl, dx, dy, dw, dh);
+    } else {
+      ctx.fillStyle = '#111'; ctx.fillRect(sx, sy, sw, sh);
+    }
+    ctx.restore();
+  }
+
+  // 3. Frame PNG on top (as-is, no color change)
+  ctx.drawImage(frameImg, fr.fx, fr.fy, fr.fw, fr.fh);
+}
+
+function drawVideoCover(ctx, vid, x, y, w, h) {
+  const vw = vid.videoWidth, vh = vid.videoHeight;
+  if (!vw||!vh) return;
+  const vr = vw/vh, sr = w/h;
+  let sx, sy, sw, sh;
+  if (vr > sr) { sh=vh; sw=vh*sr; sx=(vw-sw)/2; sy=0; }
+  else         { sw=vw; sh=vw/sr; sx=0; sy=(vh-sh)/2; }
+  ctx.drawImage(vid, sx, sy, sw, sh, x, y, w, h);
+}
+
+// ═══════════════════════════════════════════════════
+// UI canvas (handles)
+// ═══════════════════════════════════════════════════
+const HANDLE_R = 8;
+
+function drawHandles() {
+  const cw = uiCanvas.width, ch = uiCanvas.height;
+  uCtx.clearRect(0, 0, cw, ch);
+  if (!frameImg) return;
+  const {fx, fy, fw, fh} = getFrameRect(cw, ch);
+
+  // Frame border
+  uCtx.strokeStyle = 'rgba(99,102,241,0.5)';
+  uCtx.lineWidth = 1.5;
+  uCtx.setLineDash([6,4]);
+  uCtx.strokeRect(fx, fy, fw, fh);
+  uCtx.setLineDash([]);
+
+  // Corner handles
+  const corners = [{x:fx,y:fy},{x:fx+fw,y:fy},{x:fx,y:fy+fh},{x:fx+fw,y:fy+fh}];
+  corners.forEach(({x,y}) => {
+    uCtx.fillStyle = '#fff';
+    uCtx.strokeStyle = 'var(--accent)';
+    uCtx.lineWidth = 2;
+    uCtx.beginPath(); uCtx.arc(x, y, HANDLE_R, 0, Math.PI*2);
+    uCtx.fill(); uCtx.stroke();
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// Render loop
+// ═══════════════════════════════════════════════════
+function render() {
+  const cw = mainCanvas.width, ch = mainCanvas.height;
+  drawComposite(mCtx, cw, ch);
+  drawHandles();
+  rafId = requestAnimationFrame(render);
+}
+
+// ═══════════════════════════════════════════════════
+// Drag / resize interaction
+// ═══════════════════════════════════════════════════
+let drag = null; // { mode: 'move'|'resize', startMx, startMy, startCx, startCy, startScale, corner }
+
+uiCanvas.addEventListener('mousedown', e => {
+  if (!frameImg) return;
+  const {mx, my} = toCanvas(e);
+  const cw = uiCanvas.width, ch = uiCanvas.height;
+  const {fx, fy, fw, fh} = getFrameRect(cw, ch);
+
+  // Check corner handles first
+  const corners = [{x:fx,y:fy},{x:fx+fw,y:fy},{x:fx,y:fy+fh},{x:fx+fw,y:fy+fh}];
+  for (const c of corners) {
+    if (Math.hypot(mx-c.x, my-c.y) < HANDLE_R+4) {
+      drag = {mode:'resize', startMx:mx, startMy:my,
+              startScale:T.frame.scale, corner:c,
+              startCx:T.frame.cx, startCy:T.frame.cy};
+      return;
+    }
+  }
+
+  // Check inside frame
+  if (mx >= fx && mx <= fx+fw && my >= fy && my <= fy+fh) {
+    drag = {mode:'move', startMx:mx, startMy:my,
+            startCx:T.frame.cx, startCy:T.frame.cy};
+    uiCanvas.style.cursor = 'grabbing';
+  }
+});
+
+uiCanvas.addEventListener('mousemove', e => {
+  if (!drag) {
+    // Update cursor
+    if (!frameImg) return;
+    const {mx, my} = toCanvas(e);
+    const cw = uiCanvas.width, ch = uiCanvas.height;
+    const {fx, fy, fw, fh} = getFrameRect(cw, ch);
+    const corners = [{x:fx,y:fy},{x:fx+fw,y:fy},{x:fx,y:fy+fh},{x:fx+fw,y:fy+fh}];
+    let onHandle = corners.some(c => Math.hypot(mx-c.x, my-c.y) < HANDLE_R+4);
+    let inFrame  = mx>=fx && mx<=fx+fw && my>=fy && my<=fy+fh;
+    uiCanvas.style.cursor = onHandle ? 'nwse-resize' : inFrame ? 'grab' : 'default';
+    return;
+  }
+
+  const {mx, my} = toCanvas(e);
+  const cw = uiCanvas.width, ch = uiCanvas.height;
+  const dx = mx - drag.startMx, dy = my - drag.startMy;
+
+  if (drag.mode === 'move') {
+    T.frame.cx = drag.startCx + dx/cw;
+    T.frame.cy = drag.startCy + dy/ch;
+  } else if (drag.mode === 'resize') {
+    // Distance from frame center to current mouse
+    const frameCx = T.frame.cx * cw, frameCy = T.frame.cy * ch;
+    const dist = Math.hypot(mx - frameCx, my - frameCy);
+    const startDist = Math.hypot(drag.corner.x - frameCx, drag.corner.y - frameCy);
+    if (startDist > 0) {
+      T.frame.scale = Math.max(0.1, Math.min(2, drag.startScale * dist/startDist));
+      document.getElementById('frame-scale').value = Math.round(T.frame.scale*100);
+      document.getElementById('frame-scale-val').textContent = Math.round(T.frame.scale*100)+'%';
+    }
+  }
+});
+
+['mouseup','mouseleave'].forEach(ev =>
+  uiCanvas.addEventListener(ev, () => { drag=null; uiCanvas.style.cursor='default'; })
+);
+
+function toCanvas(e) {
+  const rect = uiCanvas.getBoundingClientRect();
+  return {
+    mx: (e.clientX - rect.left) * pixelScale,
+    my: (e.clientY - rect.top)  * pixelScale,
+  };
+}
+
+// ═══════════════════════════════════════════════════
+// Screen detection
+// ═══════════════════════════════════════════════════
+function detectScreen(img) {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const tmp = Object.assign(document.createElement('canvas'),{width:w,height:h});
+  tmp.getContext('2d').drawImage(img,0,0);
+  const px = tmp.getContext('2d').getImageData(0,0,w,h).data;
+  const a = (x,y) => { if(x<0||y<0||x>=w||y>=h)return 255; return px[(y*w+x)*4+3]; };
+  const cx=Math.floor(w/2), cy=Math.floor(h/2);
+  if (a(cx,cy) > 30) return null;
+
+  const step = Math.max(1, Math.floor(Math.min(w,h)/300));
+  let minX=cx, maxX=cx, minY=cy, maxY=cy;
+  const Q=[[cx,cy]], visited=new Set([`${cx},${cy}`]);
+  while(Q.length) {
+    const [x,y]=Q.shift();
+    if(x<minX)minX=x; if(x>maxX)maxX=x;
+    if(y<minY)minY=y; if(y>maxY)maxY=y;
+    for(const[dx,dy] of [[-step,0],[step,0],[0,-step],[0,step]]) {
+      const nx=x+dx, ny=y+dy, k=`${nx},${ny}`;
+      if(!visited.has(k)&&a(nx,ny)<30){visited.add(k);Q.push([nx,ny]);}
+    }
+  }
+  return {x:minX, y:minY, w:maxX-minX, h:maxY-minY};
+}
+
+// ═══════════════════════════════════════════════════
+// File loaders
+// ═══════════════════════════════════════════════════
+function loadFrame(file) {
+  if (!file || !file.type.includes('png')) { alert('투명 스크린이 있는 PNG 파일을 올려주세요'); return; }
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    frameImg = img;
+    const scr = detectScreen(img);
+    if (scr && scr.w > 10 && scr.h > 10) {
+      screenArea = scr;
+      const ok = document.getElementById('screen-ok');
+      ok.textContent = `✓ 스크린 감지 (${scr.w}×${scr.h}px)`;
+      ok.style.display = 'block';
+      document.getElementById('screen-err').style.display = 'none';
+    } else {
+      screenArea = null;
+      document.getElementById('screen-err').textContent = '⚠ 중앙 투명 영역 없음. 스크린이 투명한 PNG인지 확인하세요.';
+      document.getElementById('screen-err').style.display = 'block';
+      document.getElementById('screen-ok').style.display = 'none';
+    }
+    updateDz('frame-dz', 'frame-nm', file.name);
+    showCanvas();
+    checkReady();
+  };
+  img.src = url;
+}
+
+function loadVideo(file) {
+  if (!file || !file.type.startsWith('video/')) return;
+  videoEl.src = URL.createObjectURL(file);
+  videoEl.loop = true; videoEl.muted = true; videoEl.play();
+  vidLoaded = true;
+  updateDz('vid-dz', 'vid-nm', file.name);
+  showCanvas();
+  checkReady();
+}
+
+function updateDz(dzId, nmId, name) {
+  const dz = document.getElementById(dzId);
+  dz.classList.add('done');
+  dz.querySelector('.dz-ic') && (dz.querySelector('.dz-ic').textContent = '✅');
+  dz.querySelector('.dz-lb').textContent = '다른 파일로 교체';
+  const nm = document.getElementById(nmId);
+  nm.textContent = name; nm.style.display = 'block';
+}
+
+function showCanvas() {
+  document.getElementById('empty-msg').style.display = 'none';
+  document.getElementById('canvas-wrap').style.display = 'block';
+}
+
+function checkReady() {
+  const ready = frameImg && screenArea && vidLoaded;
+  document.getElementById('export-btn').disabled = !ready;
+  document.getElementById('export-hint').textContent = ready
+    ? `${PLATFORMS[platform].w}×${PLATFORMS[platform].h} · ${fps}fps · ${Q[quality]/1e6|0}Mbps`
+    : !frameImg ? '① 프레임 PNG를 올려주세요'
+    : !screenArea ? '스크린 투명 영역이 감지되지 않았어요'
+    : '② 영상을 올려주세요';
+}
+
+function resetTransform() {
+  T.frame.cx = 0.5; T.frame.cy = 0.5; T.frame.scale = 0.80;
+  T.vidScale = 1; T.vidOx = 0; T.vidOy = 0;
+  document.getElementById('frame-scale').value = 80;
+  document.getElementById('frame-scale-val').textContent = '80%';
+  document.getElementById('vid-scale').value = 100;
+  document.getElementById('vid-scale-val').textContent = '100%';
+  document.getElementById('vid-ox').value = 0; document.getElementById('vid-ox-val').textContent = '0';
+  document.getElementById('vid-oy').value = 0; document.getElementById('vid-oy-val').textContent = '0';
+}
+
+// ═══════════════════════════════════════════════════
+// Background controls
+// ═══════════════════════════════════════════════════
+function switchBg(type, btn) {
+  BG.type = type;
+  document.querySelectorAll('#bg-pills .pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['gradient','solid','image','bgvideo'].forEach(t => {
+    document.getElementById('bp-'+t).classList.toggle('active', t===type);
+  });
+  if (type !== 'bgvideo' && BG.bgVid) BG.bgVid.pause();
+  if (type === 'bgvideo' && BG.bgVid) BG.bgVid.play();
+}
+
+function updateBg() {
+  BG.gc1 = document.getElementById('gc1').value;
+  BG.gc2 = document.getElementById('gc2').value;
+  BG.angle = +document.getElementById('gangle').value;
+  const sc = document.getElementById('solid-c').value;
+  BG.solidColor = sc;
+  document.getElementById('solid-hex').textContent = sc;
+}
+
+function setBgFit(fit, btn) {
+  BG.imgFit = fit;
+  document.querySelectorAll('#bgimg-fit-pills .pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function bindDz(dzId, fiId, handler) {
+  const dz = document.getElementById(dzId);
+  const fi = document.getElementById(fiId);
+  dz.addEventListener('click', () => fi.click());
+  fi.addEventListener('change', e => handler(e.target.files[0]));
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); handler(e.dataTransfer.files[0]); });
+}
+
+// ═══════════════════════════════════════════════════
+// Platform select
+// ═══════════════════════════════════════════════════
+document.getElementById('plat-grid').addEventListener('click', e => {
+  const btn = e.target.closest('.plat-btn');
+  if (!btn) return;
+  document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  platform = btn.dataset.plat;
+  setupCanvas(platform);
+  checkReady();
+});
+
+// ═══════════════════════════════════════════════════
+// Quality / FPS
+// ═══════════════════════════════════════════════════
+function setQ(q, btn) {
+  quality = q;
+  document.querySelectorAll('#q-pills .pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  checkReady();
+}
+function setFps(f, btn) {
+  fps = f;
+  document.querySelectorAll('#fps-pills .pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  checkReady();
+}
+
+// ═══════════════════════════════════════════════════
+// Export (WebCodecs MP4 → WebM fallback)
+// ═══════════════════════════════════════════════════
+let isExporting = false;
+
+async function doExport() {
+  if (isExporting || !frameImg || !screenArea || !vidLoaded) return;
+
+  // WebCodecs 지원 확인
+  if (typeof VideoEncoder !== 'undefined') {
+    await exportMP4();
+  } else {
+    await exportWebM();
+  }
+}
+
+async function exportMP4() {
+  const {w: EW, h: EH} = PLATFORMS[platform];
+  const bitrate  = Q[quality];
+  const frameMs  = 1000 / fps;
+  const frameMicros = 1_000_000 / fps;
+  const duration = videoEl.duration || 10;
+  const totalFrames = Math.ceil(duration * fps);
+
+  // 내보내기용 오프스크린 캔버스
+  const ec  = Object.assign(document.createElement('canvas'), {width:EW, height:EH});
+  const ectx = ec.getContext('2d');
+
+  // mp4-muxer 동적 로드
+  let Muxer, ABTarget;
+  const cdns = [
+    'https://cdn.jsdelivr.net/npm/mp4-muxer@4.1.3/+esm',
+    'https://esm.sh/mp4-muxer@4.1.3',
+    'https://cdn.skypack.dev/mp4-muxer@4.1.3',
+  ];
+  for (const cdn of cdns) {
+    try {
+      const mod = await import(cdn);
+      Muxer = mod.Muxer; ABTarget = mod.ArrayBufferTarget;
+      break;
+    } catch(_) {}
+  }
+  if (!Muxer) { await exportWebM(); return; }
+
+  // H.264 코덱 탐색
+  const codecs = ['avc1.640034','avc1.4d0034','avc1.4d0032','avc1.42001f','avc1.42001e'];
+  let codec = 'avc1.42001e';
+  for (const c of codecs) {
+    try {
+      const r = await VideoEncoder.isConfigSupported({codec:c, width:EW, height:EH, bitrate});
+      if (r.supported) { codec = c; break; }
+    } catch(_) {}
+  }
+
+  startProgress();
+  isExporting = true;
+
+  try {
+    const target  = new ABTarget();
+    const muxer   = new Muxer({target, video:{codec:'avc',width:EW,height:EH}, fastStart:'in-memory'});
+    let encErr = null;
+    const encoder = new VideoEncoder({
+      output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+      error:  (e) => { encErr = e; },
+    });
+    encoder.configure({codec, width:EW, height:EH, bitrate, framerate:fps});
+
+    videoEl.currentTime = 0;
+    videoEl.loop = false;
+    await videoEl.play();
+
+    for (let f = 0; f < totalFrames; f++) {
+      if (encErr) throw encErr;
+      drawComposite(ectx, EW, EH);
+      const frame = new VideoFrame(ec, {timestamp: Math.round(f * frameMicros)});
+      encoder.encode(frame, {keyFrame: f % (fps*2) === 0});
+      frame.close();
+      setProgress(f, totalFrames, 'MP4 인코딩 중...');
+      await new Promise(r => setTimeout(r, frameMs));
+    }
+
+    await encoder.flush();
+    muxer.finalize();
+
+    const blob = new Blob([target.buffer], {type:'video/mp4'});
+    downloadBlob(blob, `mockup-${platform}-${Date.now()}.mp4`);
+    showToast('MP4 저장 완료 ✓');
+  } catch(e) {
+    console.error(e);
+    await exportWebM();
+  } finally {
+    videoEl.loop = true; videoEl.play();
+    stopProgress();
+    isExporting = false;
+  }
+}
+
+async function exportWebM() {
+  const {w:EW, h:EH} = PLATFORMS[platform];
+  const frameMs = 1000 / fps;
+  const duration = videoEl.duration || 10;
+  const totalFrames = Math.ceil(duration * fps);
+
+  const ec   = Object.assign(document.createElement('canvas'), {width:EW, height:EH});
+  const ectx = ec.getContext('2d');
+
+  const candidates = [
+    'video/mp4;codecs=avc1.42E01E','video/mp4;codecs=avc1','video/mp4',
+    'video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm',
+  ];
+  const safeCheck = t => { try { return MediaRecorder.isTypeSupported(t); } catch{return false;} };
+  const mime = candidates.find(safeCheck) || '';
+  const ext  = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+
+  startProgress();
+  isExporting = true;
+
+  const chunks = [];
+  const stream = ec.captureStream(fps);
+  let rec;
+  try {
+    rec = new MediaRecorder(stream, {mimeType:mime, videoBitsPerSecond:Q[quality]});
+  } catch {
+    rec = new MediaRecorder(stream);
+  }
+  rec.ondataavailable = e => { if(e.data?.size>0) chunks.push(e.data); };
+
+  videoEl.currentTime = 0; videoEl.loop = false;
+  await videoEl.play();
+  rec.start(Math.round(frameMs));
+
+  // 렌더 루프 (내보내기용)
+  for (let f = 0; f < totalFrames; f++) {
+    drawComposite(ectx, EW, EH);
+    setProgress(f, totalFrames, `${ext.toUpperCase()} 녹화 중...`);
+    await new Promise(r => setTimeout(r, frameMs));
+  }
+
+  rec.stop();
+  await new Promise(res => { rec.addEventListener('stop', res, {once:true}); setTimeout(res, 3000); });
+
+  const blob = new Blob(chunks, {type: rec.mimeType || mime || 'video/webm'});
+  downloadBlob(blob, `mockup-${platform}-${Date.now()}.${ext}`);
+  showToast(`${ext.toUpperCase()} 저장 완료 ✓`);
+
+  videoEl.loop = true; videoEl.play();
+  stopProgress();
+  isExporting = false;
+}
+
+// ═══════════════════════════════════════════════════
+// Progress UI
+// ═══════════════════════════════════════════════════
+function startProgress() {
+  document.getElementById('export-btn').textContent = '내보내는 중...';
+  document.getElementById('export-btn').disabled = true;
+  document.getElementById('progress-wrap').style.display = 'flex';
+  document.getElementById('progress-bar').style.width = '0%';
+}
+function setProgress(f, total, label) {
+  const pct = Math.round(f/total*100);
+  document.getElementById('progress-bar').style.width = pct+'%';
+  document.getElementById('progress-label').textContent = `${label} ${f}/${total}`;
+}
+function stopProgress() {
+  document.getElementById('export-btn').textContent = '내보내기';
+  document.getElementById('export-btn').disabled = false;
+  document.getElementById('progress-wrap').style.display = 'none';
+  checkReady();
+}
+
+// ═══════════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════════
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  Object.assign(document.createElement('a'), {href:url, download:name}).click();
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
+}
+
+let toastTimer;
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+      'background:rgba(20,20,20,0.95);border:1px solid rgba(255,255,255,.12);' +
+      'color:#fff;padding:10px 20px;border-radius:8px;font-family:Pretendard,sans-serif;' +
+      'font-size:13px;z-index:9999;transition:opacity .3s;pointer-events:none';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity = '1';
+  toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 3000);
+}
+
+// ═══════════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════════
+bindDz('frame-dz', 'frame-fi', loadFrame);
+bindDz('vid-dz',   'vid-fi',   loadVideo);
+bindDz('bgimg-dz', 'bgimg-fi', file => {
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => { BG.img = img; };
+  img.src = URL.createObjectURL(file);
+  document.getElementById('bgimg-dz').innerHTML = `<div class="dz-lb">✅ ${file.name}</div>`;
+  document.getElementById('bgimg-dz').classList.add('done');
+});
+bindDz('bgvid-dz', 'bgvid-fi', file => {
+  if (!file) return;
+  if (BG.bgVid) { BG.bgVid.pause(); BG.bgVid.src = ''; }
+  const v = document.createElement('video');
+  v.src = URL.createObjectURL(file);
+  v.loop = true; v.muted = true; v.playsInline = true; v.play();
+  BG.bgVid = v;
+  document.getElementById('bgvid-dz').innerHTML = `<div class="dz-lb">✅ ${file.name}</div>`;
+  document.getElementById('bgvid-dz').classList.add('done');
+  v.addEventListener('loadedmetadata', () => {}, {once:true});
+});
+
+// gradient inputs sync
+document.getElementById('gc1').addEventListener('input', updateBg);
+document.getElementById('gc2').addEventListener('input', updateBg);
+document.getElementById('solid-c').addEventListener('input', updateBg);
+
+// Start
+setupCanvas(platform);
+render();
+checkReady();
+
+// Window resize
+window.addEventListener('resize', () => { setupCanvas(platform); });
+</script>
+</body>
+</html>
