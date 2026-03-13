@@ -914,6 +914,7 @@ function buildPresetGrid() {
 function loadPreset(name, wrapEl) {
   const url = `./frames/${name}`;
   const img = new Image();
+  img.crossOrigin = 'anonymous';
   img.onload = () => {
     frameImg = img;
     const scr = detectScreen(img);
