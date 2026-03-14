@@ -192,7 +192,7 @@ input[type=number]{width:60px;padding:4px 6px;background:var(--input-bg);
     <!-- 브라우저 모드 -->
     <div id="fm-browser" style="display:none">
       <div class="field">
-        <label>URL 표시</label>
+        <label>URL</label>
         <input type="text" id="browser-url" value="hyuk.xyz" placeholder="hyuk.xyz"
           style="width:100%;padding:5px 8px;background:var(--input-bg);border:1px solid var(--input-border);
                  border-radius:6px;font-size:12px;color:var(--text);font-family:var(--font);outline:none"
@@ -206,11 +206,27 @@ input[type=number]{width:60px;padding:4px 6px;background:var(--input-bg);
         </div>
       </div>
       <div class="field">
-        <label>콘텐츠 배율</label>
+        <label>창 크기</label>
         <div class="field-row">
-          <input type="range" id="browser-scale" min="20" max="100" value="80"
-            oninput="BROWSER.contentScale=+this.value/100;document.getElementById('browser-scale-val').textContent=this.value+'%'">
-          <span class="val" id="browser-scale-val">80%</span>
+          <input type="range" id="browser-win-scale" min="30" max="100" value="85"
+            oninput="BROWSER.winScale=+this.value/100;document.getElementById('browser-win-scale-val').textContent=this.value+'%'">
+          <span class="val" id="browser-win-scale-val">85%</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>위치 X</label>
+        <div class="field-row">
+          <input type="range" id="browser-cx" min="0" max="100" value="50"
+            oninput="BROWSER.winCx=+this.value/100;document.getElementById('browser-cx-val').textContent=this.value">
+          <span class="val" id="browser-cx-val">50</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>위치 Y</label>
+        <div class="field-row">
+          <input type="range" id="browser-cy" min="0" max="100" value="50"
+            oninput="BROWSER.winCy=+this.value/100;document.getElementById('browser-cy-val').textContent=this.value">
+          <span class="val" id="browser-cy-val">50</span>
         </div>
       </div>
     </div>
@@ -568,7 +584,7 @@ let typoImg = null;
 const TYPO = { scale: 0.8, cx: 0.5, cy: 0.5, opacity: 1.0, blend: 'source-over' };
 
 // 브라우저 모드
-const BROWSER = { dark: false, url: 'hyuk.xyz', contentScale: 0.8 };
+const BROWSER = { dark: false, url: 'hyuk.xyz', winScale: 0.85, winCx: 0.5, winCy: 0.5 };
 
 // 다중 프레임 상태
 let frames = [];
@@ -701,153 +717,280 @@ function getScreenRect(fr, rect) {
   };
 }
 
-// ── Safari 브라우저 UI ──────────────────────────────
+// ── macOS Safari 브라우저 UI (배경 위에 float) ──────
 function drawBrowser(ctx, cw, ch) {
   const dk = BROWSER.dark;
-  const s  = cw / 1280; // 1280px 기준 스케일
+
+  // 창 크기 계산 (캔버스 안에서 float)
+  const winW = cw * BROWSER.winScale;
+  // 창 높이는 비율 유지 (16:10 기준)
+  const winH = winW * (10 / 16);
+  const winX = BROWSER.winCx * cw - winW / 2;
+  const winY = BROWSER.winCy * ch - winH / 2;
+
+  // 1280px 기준 스케일 (창 너비 기준)
+  const s = winW / 1280;
 
   const C = dk ? {
-    win:       '#1e1e1e',
-    tabBar:    '#2b2b2b',
-    toolbar:   '#3a3a3a',
-    tabActive: '#3a3a3a',
-    tabText:   'rgba(255,255,255,0.82)',
-    urlBg:     '#525252',
+    titleBar:  '#2c2c2c',
+    tabBar:    '#3a3a3a',
+    tabBg:     '#3a3a3a',
+    tabActive: '#4a4a4a',
+    tabInact:  '#333',
+    toolbar:   '#3f3f3f',
+    divider:   'rgba(0,0,0,0.5)',
+    urlBg:     'rgba(255,255,255,0.1)',
+    urlBorder: 'rgba(255,255,255,0.08)',
     urlText:   'rgba(255,255,255,0.75)',
-    icon:      'rgba(255,255,255,0.55)',
-    divider:   'rgba(0,0,0,0.4)',
-    content:   '#2a2a2a',
+    urlIcon:   'rgba(255,255,255,0.35)',
+    icon:      'rgba(255,255,255,0.5)',
+    iconDim:   'rgba(255,255,255,0.2)',
+    tabText:   'rgba(255,255,255,0.8)',
+    tabTextI:  'rgba(255,255,255,0.4)',
+    content:   '#1c1c1e',
+    winRadius: 12,
   } : {
-    win:       '#ffffff',
-    tabBar:    '#e2e2e2',
+    titleBar:  '#e8e8e8',
+    tabBar:    '#d9d9d9',
+    tabBg:     '#d9d9d9',
+    tabActive: '#ffffff',
+    tabInact:  '#d0d0d0',
     toolbar:   '#f2f2f2',
-    tabActive: '#f2f2f2',
+    divider:   'rgba(0,0,0,0.15)',
+    urlBg:     'rgba(0,0,0,0.06)',
+    urlBorder: 'rgba(0,0,0,0.08)',
+    urlText:   '#1a1a1a',
+    urlIcon:   'rgba(0,0,0,0.3)',
+    icon:      '#555',
+    iconDim:   'rgba(0,0,0,0.2)',
     tabText:   '#1a1a1a',
-    urlBg:     '#e5e5e5',
-    urlText:   '#444',
-    icon:      '#666',
-    divider:   'rgba(0,0,0,0.12)',
-    content:   '#f9f9f9',
+    tabTextI:  '#888',
+    content:   '#ffffff',
+    winRadius: 12,
   };
 
-  const TAB_H  = Math.round(36 * s);
-  const TOOL_H = Math.round(44 * s);
-  const UI_H   = TAB_H + TOOL_H;
+  const R = Math.round(C.winRadius * s);
+
+  // ── 창 그림자 ──
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.45)';
+  ctx.shadowBlur  = Math.round(60 * s);
+  ctx.shadowOffsetY = Math.round(20 * s);
+  ctx.fillStyle = dk ? '#3a3a3a' : '#c8c8c8';
+  ctx.beginPath();
+  ctx.roundRect(winX, winY, winW, winH, R);
+  ctx.fill();
+  ctx.restore();
+
+  // ── 창 클립 (모든 요소를 창 안에 가두기) ──
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(winX, winY, winW, winH, R);
+  ctx.clip();
+
+  // 높이 상수
+  const TITLE_H = Math.round(38 * s);  // 신호등 바
+  const TAB_H   = Math.round(36 * s);  // 탭바
+  const TOOL_H  = Math.round(44 * s);  // 툴바
+  const CHROME  = TITLE_H + TAB_H + TOOL_H;
+
+  const ty0 = winY;  // 타이틀바 시작 Y
+  const ty1 = winY + TITLE_H;           // 탭바 시작
+  const ty2 = winY + TITLE_H + TAB_H;   // 툴바 시작
+  const ty3 = winY + CHROME;            // 콘텐츠 시작
+
+  // ── 타이틀바 (신호등) ──
+  ctx.fillStyle = C.titleBar;
+  ctx.fillRect(winX, ty0, winW, TITLE_H);
+
+  // 신호등
+  const DOT_R = Math.round(6 * s);
+  const DOT_Y = ty0 + TITLE_H / 2;
+  const dots  = [
+    { x: winX + Math.round(20*s), color: '#ff5f57' },
+    { x: winX + Math.round(40*s), color: '#febc2e' },
+    { x: winX + Math.round(60*s), color: '#28c840' },
+  ];
+  dots.forEach(d => {
+    // 외곽선
+    ctx.beginPath();
+    ctx.arc(d.x, DOT_Y, DOT_R, 0, Math.PI*2);
+    ctx.fillStyle = d.color;
+    ctx.fill();
+    // 살짝 어두운 테두리
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
 
   // ── 탭바 ──
-  ctx.fillStyle = C.tabBar;
-  ctx.fillRect(0, 0, cw, TAB_H);
+  ctx.fillStyle = C.tabBg;
+  ctx.fillRect(winX, ty1, winW, TAB_H);
+
+  // 비활성 탭 2개 (왼쪽)
+  const TAB_W    = Math.round(180 * s);
+  const TAB_PADX = Math.round(8 * s);
+  const TAB_R2   = Math.round(8 * s);
 
   // 활성 탭
-  const TAB_W = Math.min(Math.round(200 * s), cw * 0.28);
-  const TAB_X = Math.round(70 * s);
-  const TAB_R = Math.round(8 * s);
+  const TAB_AX = winX + Math.round(4 * s);
+  const TAB_AY = ty1 + Math.round(5 * s);
+  const TAB_AH = TAB_H - Math.round(5 * s);
   ctx.fillStyle = C.tabActive;
   ctx.beginPath();
-  ctx.roundRect(TAB_X, Math.round(6*s), TAB_W, TAB_H - Math.round(6*s), [TAB_R, TAB_R, 0, 0]);
+  ctx.roundRect(TAB_AX, TAB_AY, TAB_W, TAB_AH, [TAB_R2, TAB_R2, 0, 0]);
   ctx.fill();
+  // 활성 탭 아래 경계선 지우기 (toolbar와 연결)
+  ctx.fillStyle = C.tabActive;
+  ctx.fillRect(TAB_AX, TAB_AY + TAB_AH - 2, TAB_W, 4);
 
-  // favicon 원
-  ctx.fillStyle = dk ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)';
+  // 비활성 탭 1
+  const TAB_BX = TAB_AX + TAB_W + TAB_PADX;
+  ctx.fillStyle = C.tabInact;
   ctx.beginPath();
-  ctx.arc(TAB_X + Math.round(14*s), TAB_H/2, Math.round(6*s), 0, Math.PI*2);
+  ctx.roundRect(TAB_BX, TAB_AY + Math.round(3*s), TAB_W - Math.round(10*s), TAB_AH - Math.round(3*s), [TAB_R2, TAB_R2, 0, 0]);
   ctx.fill();
 
-  // 탭 텍스트
+  // favicon + 텍스트 (활성 탭)
+  const urlHost = (BROWSER.url || '').replace(/^https?:\/\//, '').split('/')[0];
+  const FAVI_R  = Math.round(5 * s);
+  const FAVI_X  = TAB_AX + Math.round(14 * s);
+  const TAB_MY  = ty1 + TAB_H / 2 + Math.round(2*s);
+  ctx.fillStyle = dk ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)';
+  ctx.beginPath();
+  ctx.arc(FAVI_X, TAB_MY, FAVI_R, 0, Math.PI*2);
+  ctx.fill();
+
   ctx.fillStyle = C.tabText;
-  ctx.font = `${Math.round(12*s)}px -apple-system, 'Noto Sans KR', sans-serif`;
+  ctx.font = `${Math.round(12*s)}px -apple-system, sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  const urlHost = (BROWSER.url || 'New Tab').replace(/^https?:\/\//, '').split('/')[0];
-  ctx.fillText(urlHost, TAB_X + Math.round(26*s), TAB_H/2);
+  // 탭 텍스트 클립 (탭 안에서만)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(TAB_AX + Math.round(26*s), TAB_AY, TAB_W - Math.round(50*s), TAB_AH);
+  ctx.clip();
+  ctx.fillText(urlHost || 'hyuk.xyz', TAB_AX + Math.round(26*s), TAB_MY);
+  ctx.restore();
 
-  // 탭 × 닫기
+  // 탭 × 닫기 버튼
+  const CLOSE_X = TAB_AX + TAB_W - Math.round(16 * s);
   ctx.fillStyle = C.icon;
-  ctx.font      = `${Math.round(14*s)}px sans-serif`;
+  ctx.font = `${Math.round(13*s)}px -apple-system, sans-serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('×', TAB_X + TAB_W - Math.round(12*s), TAB_H/2);
+  ctx.textBaseline = 'middle';
+  ctx.fillText('×', CLOSE_X, TAB_MY);
 
-  // + 새 탭
-  ctx.font = `bold ${Math.round(16*s)}px sans-serif`;
-  ctx.fillText('+', TAB_X + TAB_W + Math.round(14*s), TAB_H/2);
+  // 비활성 탭 텍스트
+  ctx.fillStyle = C.tabTextI;
+  ctx.font = `${Math.round(11*s)}px -apple-system, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('New Tab', TAB_BX + Math.round(12*s), TAB_MY);
+
+  // 탭바 우측: + 새 탭
+  ctx.fillStyle = C.icon;
+  ctx.font = `${Math.round(16*s)}px -apple-system, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('+', winX + winW - Math.round(24*s), ty1 + TAB_H / 2);
 
   // ── 툴바 ──
   ctx.fillStyle = C.toolbar;
-  ctx.fillRect(0, TAB_H, cw, TOOL_H);
+  ctx.fillRect(winX, ty2, winW, TOOL_H);
 
-  const TY = TAB_H + TOOL_H / 2;
+  // 툴바 상단 구분선
+  ctx.strokeStyle = C.divider;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(winX, ty2); ctx.lineTo(winX + winW, ty2);
+  ctx.stroke();
 
-  // 뒤로 ‹
+  const TY = ty2 + TOOL_H / 2;
+
+  // 뒤로 버튼 (SF Symbol 스타일 chevron)
+  const arrowSize = Math.round(15 * s);
   ctx.fillStyle = C.icon;
-  ctx.font = `${Math.round(22*s)}px -apple-system, sans-serif`;
+  ctx.font = `${arrowSize}px -apple-system, sans-serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('‹', Math.round(22*s), TY + Math.round(1*s));
+  ctx.textBaseline = 'middle';
+  ctx.fillText('‹', winX + Math.round(24*s), TY);
 
-  // 앞으로 › (비활성)
-  ctx.fillStyle = dk ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
-  ctx.fillText('›', Math.round(44*s), TY + Math.round(1*s));
+  // 앞으로 (비활성)
+  ctx.fillStyle = C.iconDim;
+  ctx.fillText('›', winX + Math.round(46*s), TY);
 
   // 주소창
-  const URL_PD = Math.round(90 * s);
-  const URL_W  = cw - URL_PD * 2;
-  const URL_H  = Math.round(28 * s);
-  const URL_Y  = TAB_H + (TOOL_H - URL_H) / 2;
+  const URL_LPD = Math.round(80 * s);
+  const URL_RPD = Math.round(160 * s);
+  const URL_W   = winW - URL_LPD - URL_RPD;
+  const URL_H   = Math.round(26 * s);
+  const URL_X   = winX + URL_LPD;
+  const URL_Y2  = TY - URL_H / 2;
 
+  // 주소창 배경
   ctx.fillStyle = C.urlBg;
+  ctx.strokeStyle = C.urlBorder;
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.roundRect(URL_PD, URL_Y, URL_W, URL_H, URL_H / 2);
+  ctx.roundRect(URL_X, URL_Y2, URL_W, URL_H, Math.round(7*s));
   ctx.fill();
+  ctx.stroke();
 
-  // 자물쇠 🔒
-  ctx.fillStyle = dk ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)';
-  ctx.font = `${Math.round(11*s)}px sans-serif`;
+  // 🔒 자물쇠
+  ctx.fillStyle = C.urlIcon;
+  ctx.font = `${Math.round(10*s)}px sans-serif`;
   ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('🔒', URL_PD + Math.round(10*s), TY);
+  ctx.fillText('🔒', URL_X + Math.round(8*s), TY - Math.round(1*s));
 
   // URL 텍스트
   ctx.fillStyle = C.urlText;
   ctx.font = `${Math.round(13*s)}px -apple-system, sans-serif`;
   ctx.textAlign = 'center';
-  ctx.fillText(BROWSER.url || 'hyuk.xyz', URL_PD + URL_W / 2 + Math.round(4*s), TY);
-
-  // 공유 ↑
-  ctx.fillStyle = C.icon;
-  ctx.font = `${Math.round(15*s)}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.fillText('↑', cw - Math.round(44*s), TY);
-
-  // 탭 목록 버튼 ⊞
-  ctx.font = `${Math.round(14*s)}px sans-serif`;
-  ctx.fillText('⊞', cw - Math.round(22*s), TY);
-
-  // 구분선
-  ctx.strokeStyle = C.divider;
-  ctx.lineWidth   = 1;
+  ctx.textBaseline = 'middle';
+  // URL 텍스트 클립
+  ctx.save();
   ctx.beginPath();
-  ctx.moveTo(0, UI_H); ctx.lineTo(cw, UI_H);
+  ctx.rect(URL_X + Math.round(22*s), URL_Y2, URL_W - Math.round(28*s), URL_H);
+  ctx.clip();
+  ctx.fillText(BROWSER.url || 'hyuk.xyz', URL_X + URL_W/2, TY);
+  ctx.restore();
+
+  // 우측 아이콘들
+  const RX = winX + winW - URL_RPD + Math.round(16*s);
+  ctx.fillStyle = C.icon;
+  ctx.font = `${Math.round(16*s)}px -apple-system, sans-serif`;
+  ctx.textAlign = 'center';
+  // 공유 버튼 (macOS 공유 아이콘 느낌)
+  ctx.fillText('⬆', RX + Math.round(0*s), TY);
+  // 즐겨찾기
+  ctx.fillText('☆', RX + Math.round(28*s), TY);
+  // 사이드바 토글 (≡)
+  ctx.fillText('≡', RX + Math.round(56*s), TY);
+  // 탭 개요
+  ctx.font = `${Math.round(13*s)}px -apple-system, sans-serif`;
+  ctx.fillText('⊞', RX + Math.round(80*s), TY);
+
+  // 툴바 하단 구분선
+  ctx.strokeStyle = C.divider;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(winX, ty3); ctx.lineTo(winX + winW, ty3);
   ctx.stroke();
 
   // ── 콘텐츠 영역 ──
-  const contY = UI_H;
-  const contH = ch - contY;
+  const contH = winH - CHROME;
   ctx.fillStyle = C.content;
-  ctx.fillRect(0, contY, cw, contH);
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, contY, cw, contH);
-  ctx.clip();
+  ctx.fillRect(winX, ty3, winW, contH);
 
   if (vidLoaded && videoEl.readyState >= 2) {
-    const vs = BROWSER.contentScale;
-    const dw = cw * vs, dh = contH * vs;
-    const ox = T.vidOx / 100 * cw, oy = T.vidOy / 100 * contH;
-    const dx = (cw - dw) / 2 + ox;
-    const dy = contY + (contH - dh) / 2 + oy;
+    const vs = T.vidScale;
+    const dw = winW * vs, dh = contH * vs;
+    const ox = T.vidOx / 100 * winW, oy = T.vidOy / 100 * contH;
+    const dx = winX + (winW - dw) / 2 + ox;
+    const dy = ty3  + (contH - dh) / 2 + oy;
     drawVideoCover(ctx, videoEl, dx, dy, dw, dh);
   }
-  ctx.restore();
+
+  ctx.restore(); // 창 클립 해제
 }
 
 function drawTypo(ctx, cw, ch) {
