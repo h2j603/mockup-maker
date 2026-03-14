@@ -169,6 +169,7 @@ input[type=number]{width:60px;padding:4px 6px;background:var(--input-bg);
     <div class="pills" id="frame-mode-pills">
       <button class="pill active" onclick="setFrameMode('frame',this)">프레임 사용</button>
       <button class="pill"        onclick="setFrameMode('noframe',this)">프레임 없음</button>
+      <button class="pill"        onclick="setFrameMode('browser',this)">브라우저</button>
     </div>
 
     <!-- 프레임 있음 -->
@@ -186,6 +187,32 @@ input[type=number]{width:60px;padding:4px 6px;background:var(--input-bg);
       <input type="file" id="frame-fi" accept="image/png" style="display:none">
       <div class="screen-ok"  id="screen-ok"></div>
       <div class="screen-err" id="screen-err"></div>
+    </div>
+
+    <!-- 브라우저 모드 -->
+    <div id="fm-browser" style="display:none">
+      <div class="field">
+        <label>URL 표시</label>
+        <input type="text" id="browser-url" value="hyuk.xyz" placeholder="hyuk.xyz"
+          style="width:100%;padding:5px 8px;background:var(--input-bg);border:1px solid var(--input-border);
+                 border-radius:6px;font-size:12px;color:var(--text);font-family:var(--font);outline:none"
+          oninput="BROWSER.url=this.value">
+      </div>
+      <div class="field">
+        <label>테마</label>
+        <div class="pills">
+          <button class="pill active" onclick="setBrowserTheme('light',this)">라이트</button>
+          <button class="pill"        onclick="setBrowserTheme('dark',this)">다크</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>콘텐츠 배율</label>
+        <div class="field-row">
+          <input type="range" id="browser-scale" min="20" max="100" value="80"
+            oninput="BROWSER.contentScale=+this.value/100;document.getElementById('browser-scale-val').textContent=this.value+'%'">
+          <span class="val" id="browser-scale-val">80%</span>
+        </div>
+      </div>
     </div>
 
     <!-- 프레임 없음 -->
@@ -519,6 +546,7 @@ const T = {   // transform state
   vidOx: 0,   // % offset
   vidOy: 0,
   noFrame: false,
+  browserMode: false,
   noFrameRadius: 0,
   noFrameRatio: 'video', // 'video' | '9:16' | '16:9' | '1:1' | '4:5'
   // 프레임 없음 모드 전용 위치/크기
@@ -538,6 +566,9 @@ const BG = {
 // 타이포 레이어
 let typoImg = null;
 const TYPO = { scale: 0.8, cx: 0.5, cy: 0.5, opacity: 1.0, blend: 'source-over' };
+
+// 브라우저 모드
+const BROWSER = { dark: false, url: 'hyuk.xyz', contentScale: 0.8 };
 
 // 다중 프레임 상태
 let frames = [];
@@ -670,6 +701,155 @@ function getScreenRect(fr, rect) {
   };
 }
 
+// ── Safari 브라우저 UI ──────────────────────────────
+function drawBrowser(ctx, cw, ch) {
+  const dk = BROWSER.dark;
+  const s  = cw / 1280; // 1280px 기준 스케일
+
+  const C = dk ? {
+    win:       '#1e1e1e',
+    tabBar:    '#2b2b2b',
+    toolbar:   '#3a3a3a',
+    tabActive: '#3a3a3a',
+    tabText:   'rgba(255,255,255,0.82)',
+    urlBg:     '#525252',
+    urlText:   'rgba(255,255,255,0.75)',
+    icon:      'rgba(255,255,255,0.55)',
+    divider:   'rgba(0,0,0,0.4)',
+    content:   '#2a2a2a',
+  } : {
+    win:       '#ffffff',
+    tabBar:    '#e2e2e2',
+    toolbar:   '#f2f2f2',
+    tabActive: '#f2f2f2',
+    tabText:   '#1a1a1a',
+    urlBg:     '#e5e5e5',
+    urlText:   '#444',
+    icon:      '#666',
+    divider:   'rgba(0,0,0,0.12)',
+    content:   '#f9f9f9',
+  };
+
+  const TAB_H  = Math.round(36 * s);
+  const TOOL_H = Math.round(44 * s);
+  const UI_H   = TAB_H + TOOL_H;
+
+  // ── 탭바 ──
+  ctx.fillStyle = C.tabBar;
+  ctx.fillRect(0, 0, cw, TAB_H);
+
+  // 활성 탭
+  const TAB_W = Math.min(Math.round(200 * s), cw * 0.28);
+  const TAB_X = Math.round(70 * s);
+  const TAB_R = Math.round(8 * s);
+  ctx.fillStyle = C.tabActive;
+  ctx.beginPath();
+  ctx.roundRect(TAB_X, Math.round(6*s), TAB_W, TAB_H - Math.round(6*s), [TAB_R, TAB_R, 0, 0]);
+  ctx.fill();
+
+  // favicon 원
+  ctx.fillStyle = dk ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.arc(TAB_X + Math.round(14*s), TAB_H/2, Math.round(6*s), 0, Math.PI*2);
+  ctx.fill();
+
+  // 탭 텍스트
+  ctx.fillStyle = C.tabText;
+  ctx.font = `${Math.round(12*s)}px -apple-system, 'Noto Sans KR', sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  const urlHost = (BROWSER.url || 'New Tab').replace(/^https?:\/\//, '').split('/')[0];
+  ctx.fillText(urlHost, TAB_X + Math.round(26*s), TAB_H/2);
+
+  // 탭 × 닫기
+  ctx.fillStyle = C.icon;
+  ctx.font      = `${Math.round(14*s)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('×', TAB_X + TAB_W - Math.round(12*s), TAB_H/2);
+
+  // + 새 탭
+  ctx.font = `bold ${Math.round(16*s)}px sans-serif`;
+  ctx.fillText('+', TAB_X + TAB_W + Math.round(14*s), TAB_H/2);
+
+  // ── 툴바 ──
+  ctx.fillStyle = C.toolbar;
+  ctx.fillRect(0, TAB_H, cw, TOOL_H);
+
+  const TY = TAB_H + TOOL_H / 2;
+
+  // 뒤로 ‹
+  ctx.fillStyle = C.icon;
+  ctx.font = `${Math.round(22*s)}px -apple-system, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('‹', Math.round(22*s), TY + Math.round(1*s));
+
+  // 앞으로 › (비활성)
+  ctx.fillStyle = dk ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
+  ctx.fillText('›', Math.round(44*s), TY + Math.round(1*s));
+
+  // 주소창
+  const URL_PD = Math.round(90 * s);
+  const URL_W  = cw - URL_PD * 2;
+  const URL_H  = Math.round(28 * s);
+  const URL_Y  = TAB_H + (TOOL_H - URL_H) / 2;
+
+  ctx.fillStyle = C.urlBg;
+  ctx.beginPath();
+  ctx.roundRect(URL_PD, URL_Y, URL_W, URL_H, URL_H / 2);
+  ctx.fill();
+
+  // 자물쇠 🔒
+  ctx.fillStyle = dk ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)';
+  ctx.font = `${Math.round(11*s)}px sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🔒', URL_PD + Math.round(10*s), TY);
+
+  // URL 텍스트
+  ctx.fillStyle = C.urlText;
+  ctx.font = `${Math.round(13*s)}px -apple-system, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(BROWSER.url || 'hyuk.xyz', URL_PD + URL_W / 2 + Math.round(4*s), TY);
+
+  // 공유 ↑
+  ctx.fillStyle = C.icon;
+  ctx.font = `${Math.round(15*s)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('↑', cw - Math.round(44*s), TY);
+
+  // 탭 목록 버튼 ⊞
+  ctx.font = `${Math.round(14*s)}px sans-serif`;
+  ctx.fillText('⊞', cw - Math.round(22*s), TY);
+
+  // 구분선
+  ctx.strokeStyle = C.divider;
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, UI_H); ctx.lineTo(cw, UI_H);
+  ctx.stroke();
+
+  // ── 콘텐츠 영역 ──
+  const contY = UI_H;
+  const contH = ch - contY;
+  ctx.fillStyle = C.content;
+  ctx.fillRect(0, contY, cw, contH);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, contY, cw, contH);
+  ctx.clip();
+
+  if (vidLoaded && videoEl.readyState >= 2) {
+    const vs = BROWSER.contentScale;
+    const dw = cw * vs, dh = contH * vs;
+    const ox = T.vidOx / 100 * cw, oy = T.vidOy / 100 * contH;
+    const dx = (cw - dw) / 2 + ox;
+    const dy = contY + (contH - dh) / 2 + oy;
+    drawVideoCover(ctx, videoEl, dx, dy, dw, dh);
+  }
+  ctx.restore();
+}
+
 function drawTypo(ctx, cw, ch) {
   if (!typoImg) return;
   const tw = cw * TYPO.scale;
@@ -686,6 +866,13 @@ function drawTypo(ctx, cw, ch) {
 function drawComposite(ctx, cw, ch) {
   // 1. 배경
   drawBg(ctx, cw, ch);
+
+  // ── 브라우저 모드 ─────────────────────────────
+  if (T.browserMode) {
+    drawBrowser(ctx, cw, ch);
+    drawTypo(ctx, cw, ch);
+    return;
+  }
 
   // ── 프레임 없음 모드 ──────────────────────────
   if (T.noFrame) {
@@ -1127,12 +1314,12 @@ function showCanvas() {
 
 function checkReady() {
   const hasFrame = frames.length > 0;
-  const ready = T.noFrame ? vidLoaded : (hasFrame && vidLoaded);
+  const ready = (T.noFrame || T.browserMode) ? vidLoaded : (hasFrame && vidLoaded);
   document.getElementById('export-btn').disabled = !ready;
   document.getElementById('export-hint').textContent = ready
     ? `${PLATFORMS[platform].w}×${PLATFORMS[platform].h} · ${fps}fps · ${Q[quality]/1e6|0}Mbps`
     : !vidLoaded ? '영상을 올려주세요'
-    : !hasFrame  ? '프레임을 선택하거나 "프레임 없음"으로 변경하세요'
+    : !hasFrame  ? '프레임을 선택하거나 "프레임 없음" / "브라우저"로 변경하세요'
     : '스크린 투명 영역이 감지되지 않았어요';
 }
 
@@ -1179,12 +1366,20 @@ function loadPreset(name, wrapEl) {
 }
 
 // ── 프레임 모드 전환 ──────────────────────────────
+function setBrowserTheme(theme, btn) {
+  BROWSER.dark = (theme === 'dark');
+  document.querySelectorAll('[onclick^="setBrowserTheme"]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
 function setFrameMode(mode, btn) {
-  T.noFrame = (mode === 'noframe');
+  T.noFrame     = (mode === 'noframe');
+  T.browserMode = (mode === 'browser');
   document.querySelectorAll('#frame-mode-pills .pill').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('fm-frame').style.display   = T.noFrame ? 'none' : '';
-  document.getElementById('fm-noframe').style.display = T.noFrame ? ''     : 'none';
+  document.getElementById('fm-frame').style.display   = (mode === 'frame')   ? '' : 'none';
+  document.getElementById('fm-browser').style.display  = (mode === 'browser') ? '' : 'none';
+  document.getElementById('fm-noframe').style.display  = (mode === 'noframe') ? '' : 'none';
 
   // 슬라이더 label + 값 동기화
   const label = document.getElementById('frame-scale-label');
