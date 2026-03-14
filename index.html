@@ -304,7 +304,66 @@ input[type=number]{width:60px;padding:4px 6px;background:var(--input-bg);
   </div>
 </div>
 
-<!-- ④ 배경 -->
+<!-- ④ 타이포 -->
+<div class="sec" id="sec-typo">
+  <div class="sec-hd open" onclick="toggleSec(this)">타이포 <span class="arr">▾</span></div>
+  <div class="sec-body">
+    <div class="dz" id="typo-dz" style="padding:10px">
+      <div class="dz-ic" style="font-size:15px">T</div>
+      <div class="dz-lb" style="font-size:10.5px">타이포 PNG 업로드<br><span style="opacity:.5;font-size:9.5px">투명 배경 PNG 권장</span></div>
+      <div class="dz-nm" id="typo-nm"></div>
+    </div>
+    <input type="file" id="typo-fi" accept="image/png" style="display:none">
+
+    <div id="typo-controls" style="display:none;flex-direction:column;gap:10px">
+      <div class="field">
+        <label>크기</label>
+        <div class="field-row">
+          <input type="range" id="typo-scale" min="5" max="150" value="80"
+            oninput="TYPO.scale=+this.value/100;document.getElementById('typo-scale-val').textContent=this.value+'%'">
+          <span class="val" id="typo-scale-val">80%</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>위치 X</label>
+        <div class="field-row">
+          <input type="range" id="typo-cx" min="0" max="100" value="50"
+            oninput="TYPO.cx=+this.value/100;document.getElementById('typo-cx-val').textContent=this.value">
+          <span class="val" id="typo-cx-val">50</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>위치 Y</label>
+        <div class="field-row">
+          <input type="range" id="typo-cy" min="0" max="100" value="50"
+            oninput="TYPO.cy=+this.value/100;document.getElementById('typo-cy-val').textContent=this.value">
+          <span class="val" id="typo-cy-val">50</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>불투명도</label>
+        <div class="field-row">
+          <input type="range" id="typo-opacity" min="5" max="100" value="100"
+            oninput="TYPO.opacity=+this.value/100;document.getElementById('typo-opacity-val').textContent=this.value+'%'">
+          <span class="val" id="typo-opacity-val">100%</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>블렌드</label>
+        <div class="pills" style="flex-wrap:wrap">
+          <button class="pill active" data-tblend="source-over" onclick="setTypoBlend('source-over',this)">기본</button>
+          <button class="pill" data-tblend="multiply"   onclick="setTypoBlend('multiply',this)">Multiply</button>
+          <button class="pill" data-tblend="screen"     onclick="setTypoBlend('screen',this)">Screen</button>
+          <button class="pill" data-tblend="overlay"    onclick="setTypoBlend('overlay',this)">Overlay</button>
+        </div>
+      </div>
+      <button class="pill" style="width:100%;justify-content:center;color:#c00;border-color:#ffcdd2"
+        onclick="removeTypo()">타이포 제거</button>
+    </div>
+  </div>
+</div>
+
+<!-- ⑤ 배경 -->
 <div class="sec" id="sec-bg">
   <div class="sec-hd open" onclick="toggleSec(this)">배경 <span class="arr">▾</span></div>
   <div class="sec-body">
@@ -476,6 +535,10 @@ const BG = {
   bgVid: null,
 };
 
+// 타이포 레이어
+let typoImg = null;
+const TYPO = { scale: 0.8, cx: 0.5, cy: 0.5, opacity: 1.0, blend: 'source-over' };
+
 // 다중 프레임 상태
 let frames = [];
 let activeIdx = 0;
@@ -607,6 +670,19 @@ function getScreenRect(fr, rect) {
   };
 }
 
+function drawTypo(ctx, cw, ch) {
+  if (!typoImg) return;
+  const tw = cw * TYPO.scale;
+  const th = tw * (typoImg.naturalHeight / typoImg.naturalWidth);
+  const tx = TYPO.cx * cw - tw / 2;
+  const ty = TYPO.cy * ch - th / 2;
+  ctx.save();
+  ctx.globalAlpha = TYPO.opacity;
+  ctx.globalCompositeOperation = TYPO.blend;
+  ctx.drawImage(typoImg, tx, ty, tw, th);
+  ctx.restore();
+}
+
 function drawComposite(ctx, cw, ch) {
   // 1. 배경
   drawBg(ctx, cw, ch);
@@ -627,6 +703,7 @@ function drawComposite(ctx, cw, ch) {
     if (videoEl.readyState >= 2) drawVideoCover(ctx, videoEl, dx, dy, dw, dh);
     else { ctx.fillStyle='#111'; ctx.fillRect(fx,fy,fw,fh); }
     ctx.restore();
+    drawTypo(ctx, cw, ch);
     return;
   }
 
@@ -666,6 +743,9 @@ function drawComposite(ctx, cw, ch) {
     ctx.drawImage(fr.img, rect.fx, rect.fy, rect.fw, rect.fh);
     ctx.restore();
   }
+
+  // 4. 타이포 레이어 (최상위)
+  drawTypo(ctx, cw, ch);
 }
 
 // 프레임 없음 모드용 rect 계산
@@ -979,6 +1059,33 @@ function renderFrameList() {
 
     list.appendChild(item);
   });
+}
+
+// ── 타이포 레이어 ──────────────────────────────────
+function loadTypo(file) {
+  if (!file || !file.type.includes('png')) { alert('PNG 파일을 올려주세요'); return; }
+  const img = new Image();
+  img.onload = () => {
+    typoImg = img;
+    updateDz('typo-dz', 'typo-nm', file.name);
+    document.getElementById('typo-controls').style.display = 'flex';
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+function removeTypo() {
+  typoImg = null;
+  const dz = document.getElementById('typo-dz');
+  dz.classList.remove('done');
+  dz.innerHTML = `<div class="dz-ic" style="font-size:15px">T</div>
+    <div class="dz-lb" style="font-size:10.5px">타이포 PNG 업로드<br><span style="opacity:.5;font-size:9.5px">투명 배경 PNG 권장</span></div>
+    <div class="dz-nm" id="typo-nm"></div>`;
+  document.getElementById('typo-controls').style.display = 'none';
+}
+
+function setTypoBlend(blend, btn) {
+  TYPO.blend = blend;
+  document.querySelectorAll('[data-tblend]').forEach(b => b.classList.toggle('active', b.dataset.tblend === blend));
 }
 
 function loadFrame(file) {
@@ -1397,6 +1504,7 @@ function showToast(msg) {
 // ═══════════════════════════════════════════════════
 bindDz('frame-dz', 'frame-fi', loadFrame);
 bindDz('vid-dz',   'vid-fi',   loadVideo);
+bindDz('typo-dz',  'typo-fi',  loadTypo);
 bindDz('bgimg-dz', 'bgimg-fi', file => {
   if (!file) return;
   const img = new Image();
